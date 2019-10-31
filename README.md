@@ -75,7 +75,8 @@ for the use case. In this case, we decided to use Lambda and DynamoDB as the com
 <b>Architecture: Legacy Monolithic Application</b>
 </summary>
 <br>
-The AS-IS architecture looks as follows:  
+The AS-IS architecture looks as follows:
+   
 ![](/MonoToMicroAssets/assets1024/Slide1.png)
 
 For simplicity, we will leverage a single VPC with two public subnets in two availability zones.
