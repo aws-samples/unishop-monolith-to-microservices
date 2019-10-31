@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.monoToMicro.core.repository.mappers.UserMapper">
+
+	<cache />
+
+	<insert id="create" parameterType="com.monoToMicro.core.model.User" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+		insert ignore into unicorn_user 
+		(
+			creation_date, 
+	  		created_by_user_id, 
+	  		active, 
+		  	uuid, 
+		  	email,					
+		  	first_name,						  	
+		  	last_name						  		
+		)
+		values 
+		(
+			#{creationDate},
+			#{createdByUserId},
+			#{active},
+			#{uuid}, 
+			#{email}, 								
+			#{firstName},
+			#{lastName}						
+  		)			   							   					
+	</insert>	
+	
+	<select id="getByEmail" parameterType="com.monoToMicro.core.model.User" resultType="com.monoToMicro.core.model.User">
+		SELECT
+			user.id as id,
+			user.uuid as uuid,
+			user.first_name as first_name,
+			user.last_name as last_name,
+			user.email as email
+		FROM unicorn_user user			
+		WHERE 	
+			user.email = #{email}					 
+	</select>
+</mapper>

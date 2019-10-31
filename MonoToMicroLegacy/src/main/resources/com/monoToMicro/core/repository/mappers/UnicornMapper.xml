@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" 
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.monoToMicro.core.repository.mappers.UnicornMapper">
+
+	<select id="getUnicorns" resultType="com.monoToMicro.core.model.Unicorn">
+		SELECT 
+			*
+		FROM 
+			unicorns		
+	</select>
+	
+	<insert id="addUnicornToBasket" parameterType="map" useGeneratedKeys="true">
+		INSERT IGNORE INTO unicorns_basket 
+				(
+					uuid,
+					unicornUuid 						  		
+				)
+				values 
+				(
+					#{userUuid},
+					#{unicornUuid}						
+	 			)			   			
+	</insert>
+	
+	<delete id="removeUnicornFromBasket" parameterType="map">
+			
+		DELETE  FROM unicorns_basket
+		WHERE
+			 uuid = #{userUuid}
+		AND
+			 unicornUuid = #{unicornUuid}							   			
+	</delete>
+	
+	<select id="getUnicornBasket" resultType="com.monoToMicro.core.model.Unicorn">
+		SELECT 
+			u.uuid,
+    		u.name,
+    		u.description,
+    		u.price,
+    		u.image
+		FROM unishop.unicorns u
+		JOIN unishop.unicorns_basket ub ON u.uuid = ub.unicornUuid
+		WHERE 
+			ub.uuid = #{userUuid}		
+	</select>
+	
+	<select id="getAllBaskets" resultMap="unicornBasket">
+		SELECT 
+			basket.uuid as userUuid,
+			unicorn.uuid as unicornUuid,
+			unicorn.name as unicornName,
+			unicorn.description as unicornDescription,
+			unicorn.price as unicornPrice,
+			unicorn.image as unicornImage
+		FROM unishop.unicorns_basket basket
+		JOIN unishop.unicorns unicorn on basket.unicornUuid = unicorn.uuid		
+	</select>
+	
+	<resultMap id="unicornBasket" type="com.monoToMicro.core.model.UnicornBasket">
+  		<result property="uuid" column="userUuid"/>  		  		
+		<collection property="unicorns" ofType="com.monoToMicro.core.model.Unicorn">
+			<result property="uuid" column="unicornUuid"/>
+			<result property="name" column="unicornName"/>
+			<result property="description" column="unicornDescription"/>
+			<result property="price" column="unicornPrice"/>
+			<result property="image" column="unicornImage"/>
+		</collection>		
+	</resultMap>
+	
+</mapper>

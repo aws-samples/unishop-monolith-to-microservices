@@ -1,0 +1,371 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Metadata": {
+
+    },
+    "Parameters" : {
+        "KeyName": {
+        "Description": "Name of an existing EC2 KeyPair to enable SSH access to the instance",
+        "Type": "AWS::EC2::KeyPair::KeyName",
+        "ConstraintDescription": "must be the name of an existing EC2 KeyPair.",
+        "AllowedPattern" : ".+"
+      }
+    },
+    "Resources": {
+        "MonoToMicroVPC": {
+            "Type": "AWS::EC2::VPC",
+            "Properties": {
+                "CidrBlock": "10.0.0.0/16",
+                "EnableDnsSupport": "true",
+                "EnableDnsHostnames": "true",
+                "InstanceTenancy": "default",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "MonoToMicro"
+                    }
+                ]
+            }
+        },
+        "MonoToMicroIGW": {
+            "Type": "AWS::EC2::InternetGateway",
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "MonoToMicroIGW"
+                    }
+                ]
+            }
+        },
+        "AttachGateway": {
+            "Type": "AWS::EC2::VPCGatewayAttachment",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "MonoToMicroVPC"
+                },
+                "InternetGatewayId": {
+                    "Ref": "MonoToMicroIGW"
+                }
+            }
+        },
+        "MonoToMicroSubnet1": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "MonoToMicroVPC"
+                },
+                "CidrBlock": "10.0.0.0/24",
+                "AvailabilityZone": "us-east-1a",
+                "MapPublicIpOnLaunch": "true",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "MonoToMicroSubnet1"
+                    }
+                ]
+            }
+        },
+        "MonoToMicroSubnet2": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "MonoToMicroVPC"
+                },
+                "CidrBlock": "10.0.1.0/24",
+                "AvailabilityZone": "us-east-1b",
+                "MapPublicIpOnLaunch": "true",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "MonoToMicroSubnet2"
+                    }
+                ]
+            }
+        },
+        "MonoToMicroPublicRoutTable": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "VpcId": {
+                    "Ref": "MonoToMicroVPC"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "MonoToMicroPublicRoutTable"
+                    }
+                ]
+            }
+        },
+        "MonoToMicroPublicRout": {
+            "Type": "AWS::EC2::Route",
+            "DependsOn": "AttachGateway",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "MonoToMicroPublicRoutTable"
+                },
+                "GatewayId": {
+                    "Ref": "MonoToMicroIGW"
+                },
+                "DestinationCidrBlock": "0.0.0.0/0"
+            }
+        },
+        "MonoToMicroPublicSubnetRoutTableAssoc1": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "MonoToMicroPublicRoutTable"
+                },
+                "SubnetId": {
+                    "Ref": "MonoToMicroSubnet1"
+                }
+            }
+        },
+        "MonoToMicroPublicSubnetRoutTableAssoc2": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "RouteTableId": {
+                    "Ref": "MonoToMicroPublicRoutTable"
+                },
+                "SubnetId": {
+                    "Ref": "MonoToMicroSubnet2"
+                }
+            }
+        },
+        "DBSecurityGroup":
+        {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties" :
+            {
+                "GroupDescription": "Open database for access",
+                "VpcId" : { "Ref": "MonoToMicroVPC" },
+                "SecurityGroupIngress" :
+                [
+                    {
+                        "IpProtocol" : "tcp",
+                        "FromPort" : 3306,
+                        "ToPort" : 3306,
+                        "CidrIp" : "10.0.0.0/16"
+                    }
+                ],
+                "Tags":
+                [
+                    {
+                        "Key": "Name",
+                        "Value": "MonoToMicroDBSG"
+                    }
+                ]
+            }
+        },
+        "DBSubnetGroup" :
+        {
+            "Type" : "AWS::RDS::DBSubnetGroup",
+            "Properties" :
+            {
+                "DBSubnetGroupDescription": "MonoToMicroDBSubnetGroup",
+                "SubnetIds":[{"Ref":"MonoToMicroSubnet1"},{"Ref":"MonoToMicroSubnet2"}]
+            }
+        },
+        "EC2SecurityGroup":
+        {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties" :
+            {
+                "GroupDescription": "Open App access",
+                "VpcId" : { "Ref": "MonoToMicroVPC" },
+                "SecurityGroupIngress" :
+                [
+                    {
+                        "IpProtocol" : "tcp",
+                        "FromPort" : 80,
+                        "ToPort" : 80,
+                        "CidrIp" : "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol" : "tcp",
+                        "FromPort" : 22,
+                        "ToPort" : 22,
+                        "CidrIp" : "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol" : "tcp",
+                        "FromPort" : 443,
+                        "ToPort" : 443,
+                        "CidrIp" : "0.0.0.0/0"
+                    }
+                ],
+                "SecurityGroupEgress" :
+                [
+                    {
+                        "IpProtocol" : "tcp",
+                        "FromPort" : 3306,
+                        "ToPort" : 3306,
+                        "CidrIp" : "10.0.0.0/16"
+                    },
+                    {
+                        "IpProtocol" : "tcp",
+                        "FromPort" : 80,
+                        "ToPort" : 80,
+                        "CidrIp" : "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol" : "tcp",
+                        "FromPort" : 443,
+                        "ToPort" : 443,
+                        "CidrIp" : "0.0.0.0/0"
+                    }
+                ],
+                "Tags":
+                [
+                    {
+                        "Key": "Name",
+                        "Value": "MonoToMicroEC2SG"
+                    }
+                ]
+            }
+        },
+        "S3InstanceProfile" : {
+          "Type" : "AWS::IAM::InstanceProfile",
+          "Properties" : {
+            "Path" : "/",
+            "Roles" : [
+              {
+                "Ref" : "S3Role"
+              }
+            ]
+          }
+        },
+        "S3Policy" : {
+          "Type" : "AWS::IAM::Policy",
+          "Properties" : {
+            "PolicyName" : "S3Policy",
+            "PolicyDocument" : {
+              "Statement" : [
+                {
+                  "Effect" : "Allow",
+                  "Action" : [
+                    "s3:*"
+                  ],
+                  "Resource" : "*"
+                }
+              ]
+            },
+            "Roles" : [
+              {
+                "Ref" : "S3Role"
+              }
+            ]
+          }
+        },
+        "S3Role" : {
+          "Type" : "AWS::IAM::Role",
+          "Properties" : {
+            "AssumeRolePolicyDocument": {
+              "Version" : "2012-10-17",
+              "Statement" : [
+                {
+                  "Effect" : "Allow",
+                  "Principal" : {
+                    "Service" : ["ec2.amazonaws.com"]
+                  },
+                  "Action" : [
+                    "sts:AssumeRole"
+                  ]
+                }
+              ]
+            },
+            "Path" : "/"
+          }
+       },
+        "DBInstance" :
+        {
+            "Type": "AWS::RDS::DBInstance",
+            "DeletionPolicy":"Delete",
+
+            "Properties":
+            {
+                "DBName" : "MonoToMicroDB",
+                "DBInstanceIdentifier" : "MonoToMicroDB",
+                "Engine" : "MySQL",
+                "DBInstanceClass"   : "db.t2.micro",
+                "Port"   : "3306",
+                "MasterUsername"    : "MonoToMicroUser",
+                "MasterUserPassword": "MonoToMicroPassword",
+                "VPCSecurityGroups" : [{ "Ref" : "DBSecurityGroup" } ],
+                "AllocatedStorage": "5",
+                "DBSubnetGroupName": { "Ref" : "DBSubnetGroup" },
+                "MultiAZ":"false",
+                "Tags":
+                [
+                    {
+                        "Key": "Name",
+                        "Value": "MonoToMicroDB"
+                    }
+                ]
+            }
+        },
+        "EC2Instance":
+        {
+            "Type" : "AWS::EC2::Instance",
+            "DependsOn" : "DBInstance",
+            "Properties" :
+            {
+                "InstanceType": "t2.micro",
+                "ImageId": "ami-0b898040803850657",
+                "KeyName" : {"Ref" : "KeyName"},
+                "SubnetId":  {"Ref" : "MonoToMicroSubnet1"},
+                "SecurityGroupIds":[{"Ref":"EC2SecurityGroup"}],
+                "IamInstanceProfile" : {"Ref" : "S3InstanceProfile"},
+                "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+                                "#!/bin/bash\n",
+                                "Database=", {"Fn::GetAtt": ["DBInstance","Endpoint.Address"]},
+                                "sudo su\n",
+                                "yum update -y\n",
+                                "sudo yum -y install mysql\n",
+                                "sudo yum -y install java-1.8.0-openjdk-devel\n",
+                                "sudo yum -y install unzip\n",
+                                "sudo yum install git -y\n",
+                                "git clone https://github.com/aws-samples/unishop-monolith-to-microservices.git /home/ec2-user/MonoToMicro\n",
+                                "sudo mysql -u MonoToMicroUser -h",{"Fn::GetAtt": ["DBInstance","Endpoint.Address"]}," -P 3306 -pMonoToMicroPassword < /home/ec2-user/MonoToMicro/MonoToMicroLegacy/database/create_tables.sql\n",
+                                "export MONO_TO_MICRO_DB_ENDPOINT=",{"Fn::GetAtt": ["DBInstance","Endpoint.Address"]},"\n",
+                                "cd /home/ec2-user/\n",
+                                "sudo wget https://services.gradle.org/distributions/gradle-5.6.3-bin.zip\n",
+                                "sudo unzip -d /home/ec2-user/ /home/ec2-user/gradle-5.6.3-bin.zip\n",
+                                "export PATH=$PATH:/home/ec2-user/gradle-5.6.3/bin\n",
+                                "cd /home/ec2-user/MonoToMicro/MonoToMicroLegacy\n",
+                                "gradle clean build\n",
+                                "cd /home/ec2-user/MonoToMicro/MonoToMicroLambda\n",
+                                "gradle clean build\n",
+                                "UI_RANDOM_NAME=unishop-ui-$RANDOM\n",
+                                "ASSETS_RANDOM_NAME=unishop-assets-$RANDOM\n",
+                                "aws s3api create-bucket --bucket $UI_RANDOM_NAME --region us-east-1\n",
+                                "aws s3api create-bucket --bucket $ASSETS_RANDOM_NAME --region us-east-1\n",
+                                "aws s3 cp /home/ec2-user/MonoToMicro/MonoToMicroUI s3://$UI_RANDOM_NAME/ --recursive --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers\n",
+                                "aws s3 cp /home/ec2-user/MonoToMicro/MonoToMicroLambda/build/libs s3://$ASSETS_RANDOM_NAME/ --recursive --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers\n",
+                                "java -jar /home/ec2-user/MonoToMicro/MonoToMicroLegacy/build/libs/MonoToMicroLegacy-0.0.1-SNAPSHOT.jar &\n"
+                ]]}},
+                "Tags":
+                [
+                    {
+                        "Key": "name",
+                        "Value": "MonoToMicroEC2"
+                    }
+                ]
+            }
+        }
+    },
+    "Outputs" : {
+        "PublicDns" : {
+            "Value" : {
+              "Fn::Join":[
+                "/",
+                [
+                  "http:/",
+                  "Fn::GetAtt" : ["EC2Instance", "PublicDnsName"]
+                ]
+              ]
+            },
+            "Description" : "Server Public DNS"
+        }
+    }
+}
