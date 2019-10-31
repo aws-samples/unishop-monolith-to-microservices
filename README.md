@@ -24,7 +24,7 @@ pattern](https://martinfowler.com/bliki/StranglerFigApplication.html).
 Before we start, we will need to ensure that we have some tools installed.
 
 * **AWS account (mandatory)**: for deploying the resources and application
-* **Java (optional)**: It is recommended to check if you have Java already installed. Use the `java -version` from command line to check
+* **Java (optional)**: If you planning on compiling the code yourself you will need Java installed locally. It is recommended to check if you have Java already installed. Use the `java -version` from command line to check
 if you have it on your machine (see output below for how it should look if you have Java installed on your machine. If
 you can't find it on your machine then download Java 1.8.0.x or above).
 
@@ -36,9 +36,10 @@ Java HotSpot(TM) 64-Bit Server VM (build 25.202-b08, mixed mode)
 ```
 
 * **IDE of your choosing (optional, two popular ones listed below)**:
+If you planning on browsing the code locally we recommend you will use an IDE
     * Eclipse IDE for Java Developers: https://www.eclipse.org/downloads/
     * IntelliJ IDEA: https://www.jetbrains.com/idea/download/
-* **Gradle (optional)**: for compiling the project: https://gradle.org/install/
+* **Gradle (optional)**: If you planning on compiling the code yourself you will need Gardle installed locally. Download Gardle from https://gradle.org/install/
 
 </details>
 
@@ -49,16 +50,19 @@ Java HotSpot(TM) 64-Bit Server VM (build 25.202-b08, mixed mode)
 <br> 
 We've broken the workshop down into easy to follow and digestible chunks, which walks you through the process of
 transforming a monolithic application to a microservices-based application.
-
-In **Part 1**, we will cover the monolithic application. It is a "traditional" Spring Boot Java application which will be deployed on an EC2 instance and connect to RDS MySQL database. The frontend will be hosted on S3 "Static web hosting", it is a simple yet powerful hosting solution which auto-scale and meet growing needs automatically. Once deployed, the "Unishop" will be accessible to the outside
+   
+In **Part 1**, we will cover the monolithic application. It is a **traditional** Spring Boot Java application which will be deployed on an EC2 instance and connect to RDS MySQL database. The frontend will be hosted on S3 **Static web hosting**, it is a simple yet powerful hosting solution which auto-scale and meet growing needs automatically. Once deployed, the **Unishop** will be accessible to the outside
 world.
 
 In **Part 2-5** we will extract domain-based functionality and build it as a standalone microservice using Lambda and DynamoDB. In this case, that will be the Unishop shopping cart functionality.
 
-In **Part 2** we will front the legacy application with API Gateway which will help switch between old REST API to new Lambda code.  
-In **Part 3** we will set up a new DynamoDB table which will hold the shopping cart.  
+In **Part 2** we will front the legacy application with API Gateway which will help switch between old REST API to new Lambda code.
+
+In **Part 3** we will set up a new DynamoDB table which will hold the shopping cart.
+
 In **Part 4** we will deploy Lambda code which will replace the legacy shopping cart functionality.  
-and Part 5 will be used to wrap up and clean up.  
+
+**Part 5** will be used to wrap up and clean up.  
 
 As you probably understand by now, one of the major benefits of moving to microservices architecture is that you can
 develop each microservice using different technologies stack which is most suitable
@@ -108,11 +112,11 @@ capabilities to be deployed as a separate microservice.
 
 Let's take a moment to inspect the code base of the monolithic application that we just deployed. It is broken up into a
 number of primary controllers.
-* CoreController
+    * CoreController
     * BasketController: basket management
     * UnicornController: inventory management
     * UserController: user management, registration, login
-* HealthController: performs basic health checks
+    * HealthController: performs basic health checks
 
 In addition to the controllers, each domain got a number of other key components, e.g. events, models, repository
 representations, and services. The database (RDS MySQL) is a reflection of the domains with 3 tables.
@@ -122,11 +126,11 @@ representations, and services. The database (RDS MySQL) is a reflection of the d
 
 In an e-commerce application, the basket functionality is critical. It needs to be highly available, durable, and
 scalble to meet on-going and spiky workloads, e.g. Black Friday surges. One good first step would be to move this
-functionality out of the monolith to allow it to scale independently to meet these incoming needs. This also allows the
+functionality out of the monolith to allow it to scale independently to meet these needs. This also allows the
 development teams to respond more rapidly to new business requirements, e.g. the business wanting to add new items
-associated with their new insurance and banking initiatives.
+associated with their new insurance or banking initiatives.
 
-So, let's plan the move, we will need a simple yet bullet proof plan which we can follow and replicate in the future for
+So, let's plan the move, we will need a simple yet bulletproof plan which we can follow and replicate in the future for
 other microservices. When thinking about breaking a monolith you need to consider the following 
 * Microservice stack: Which tools are best for the microservice implementation? 
 * Microservice data access: How do you make sure that current consumers of the API's won't break?
@@ -163,7 +167,7 @@ For this portion, please work through this [exercise](/MonoToMicroAPIGateway).
    ```
 In part 2 we've introduced API gateway to front the legacy application. This is the first step moving 
 towards microservice architecture. Fronting your legacy application with API gateway enables more than 
-just move to microservices, you can also introduce GraphQL on top of it to merge schemas and create 
+just a move to microservices, you can also introduce GraphQL on top of it to merge schemas and create 
 API’s which pulls information from different microservices, giving the business ability to test 
 different data consumption patterns and innovate rapidly. 
    ```
@@ -214,8 +218,8 @@ For this portion, please work through this [exercise](/MonoToMicroLambda).
 <br> 
    
    ```
-So, what happened here, we’ve deployed a legacy up by lifting and shifting it to the cloud using 
-CloudFormation. Next, we’ve fronted the legacy application with API gateway which to enable 
+So, what happened here, we’ve deployed a legacy application to the cloud using CloudFormation 
+(the app can be an on premises one). Next, we’ve fronted the legacy application with API gateway to enable seamless 
 switchover between implementations and redirecting requests to different microservices. Lastly, 
 we’ve implemented a new microservice which breaks the legacy monolith to small chunks and 
 redirected requests to the new service. et voila, strangler pattern in action. Now, let’s do 
@@ -229,7 +233,8 @@ some cleanup and happy hour is just around the corner.
 <b>Part 5: Wrap-up and Clean-up (~10 min)</b>
 </summary>
 <br>
-Modernizing legacy applications is a necessity, there are few approaches you can follow; we hope that this workshop highlighted the benefits of breaking the monolith using the **strangler pattern**. Whichever approach you decide to follow we believe that the gradual improvement will benefit your business and increase confidence in delivering application modernization. Good luck with your own journey!
+   
+Modernizing legacy applications is a necessity, there are few approaches you can follow; we hope that this workshop highlighted the benefits of breaking the monolith using the **strangler pattern**. Whichever approach you decide to follow we believe that the gradual improvement will benefit your business and increase confidence in delivering application modernization. Good luck with your journey!
 
 ```diff
 - Before you leave, make sure you delete the below resources so you won’t be charged for on going usage!
