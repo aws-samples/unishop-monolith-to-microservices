@@ -27,11 +27,11 @@ Save file name: MonoToMicroCF.template
 <br>
 ![](../MonoToMicroAssets/assets1024/CloudFormationStep1.png)
 
-**1.4** Click "Create stack" to start the process.  
+**1.4** Click **Create stack** to start the process.  
 <br>
 ![](../MonoToMicroAssets/assets1024/CloudFormationStep2.png)
 
-**1.5** Select "Upload a template file" and "Choose file" to upload the file that you've downloaded in step 1.1. Finally, click "Next" 
+**1.5** Select **Upload a template file** and **Choose file** to upload the file that you've downloaded in step 1.1. Finally, click **Next** 
 <br>
 ![](../MonoToMicroAssets/assets1024/CloudFormationStep3.png) 
 
@@ -42,7 +42,7 @@ Stack Name: MonoToMicro
 
 ![](../MonoToMicroAssets/assets1024/CloudFormationStep4.png)  
 
-**1.7** Click "Next" to skip the stack configuration options, as we will use defaults in this section.  
+**1.7** Click **Next** to skip the stack configuration options, as we will use defaults in this section.  
 <br>
 ![](../MonoToMicroAssets/assets1024/CloudFormationStep5.png)
 
@@ -131,7 +131,7 @@ Step 4: Verify frontend deployment
 <br>
 ![](../MonoToMicroAssets/assets1024/S3StaticSite19.png)  
 
-**4.2** You should see the Unishop landing page, but, unless you are extreamly lucky, you won't see unicorns loading. The reason for that is that the legacy API endpoint is not configured properly. We will need to download config.json file from S3, change the URL within, and reload it to S3.
+**4.2** You should see the Unishop landing page, but, unless you are extreamly lucky, you won't see unicorns loading. The reason for that is that the monolithic legacy API's endpoint is not configured properly. We will need to download config.json file from S3, change the URL within, and reload it to S3.
 ![](../MonoToMicroAssets/assets1024/NoUnicorns.png)  
 
 **4.3** Download the config.json file from the **unishop-ui-xxxxx** to your local machine. 
