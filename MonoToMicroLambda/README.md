@@ -9,7 +9,7 @@ We will start with methods set up and then hook API gateway with the mnethods.
 </summary>
 <br> 
 
-**1.1** We have pre-compiled the Java package into a JAR file which we will use for our Lambda method. Download the Jar file from [here](../MonoToMicroAssets/MonoToMicroLambda-0.0.1.jar). We will use it in step 5. 
+**1.1** As part of the build process we've compiled the Lambda Java code into a JAR file which we will use for our Lambda method invocation. The jar file can be found in S3 under the unishop-assets-xxxxx folder (xxxxx is a random number which is generated as part of the build). Download the Jar file to your local machine. 
 
 **1.2** Navigate to the Lambda page.   
 
