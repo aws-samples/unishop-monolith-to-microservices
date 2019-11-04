@@ -177,7 +177,7 @@ Model name: UnicornBasket
 }
 ```
 
-**2.11** Navigate to the GET method under the unicorn/basket API, change the integration type to Lambda and choose the **GetUnicornsBasket**. Next, expand the mapping template section at the bottom of the page
+**2.11** Navigate to the GET method under the unicorn/basket API, change the integration type to Lambda and choose the **GetUnicornsBasket** and click **Save**. Next, expand the mapping template section at the bottom of the page
 
 ![](../MonoToMicroAssets/assets1024/API2LambdaStep17.png)   
 
