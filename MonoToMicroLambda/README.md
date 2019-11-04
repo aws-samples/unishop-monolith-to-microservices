@@ -50,7 +50,7 @@ com.monoToMicro.Lambda.UnicornBasketImpl::addUnicornToBasket
 
 ![](../MonoToMicroAssets/assets1024/LambdaStep6.png)
 
-**1.8.** Name the event as "AddUnicornToBasket", fill in the JSON to use, and click the Create button. See below for an
+**1.8.** Name the event as **AddUnicornToBasket**, fill in the JSON to use, and click the Create button. See below for an
 example event. 
 ```
 {
