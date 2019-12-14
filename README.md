@@ -263,5 +263,4 @@ Thanks for the below team members who worked very hard to get this workshop in p
 * **Aravind Singirikonda**
 * **Heeki Park**
 * **Nir Ozeri**
-* **Unicron1**
 </details>
