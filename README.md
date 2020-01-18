@@ -39,7 +39,7 @@ Java HotSpot(TM) 64-Bit Server VM (build 25.202-b08, mixed mode)
 If you planning on browsing the code locally we recommend you will use an IDE
     * Eclipse IDE for Java Developers: https://www.eclipse.org/downloads/
     * IntelliJ IDEA: https://www.jetbrains.com/idea/download/
-* **Gradle (optional)**: If you planning on compiling the code yourself you will need Gardle installed locally. Download Gardle from https://gradle.org/install/
+* **Gradle (optional)**: If you planning on compiling the code yourself you will need Gradle installed locally. Download Gradle from https://gradle.org/install/
 
 </details>
 
