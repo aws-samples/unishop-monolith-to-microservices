@@ -9,7 +9,11 @@
 			"Type": "AWS::EC2::KeyPair::KeyName",
 			"ConstraintDescription": "must be the name of an existing EC2 KeyPair.",
 			"AllowedPattern": ".+"
-		}
+		},
+		  "LatestAmiId":{
+            "Type": "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
+            "Default": "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
+	    }
 	},
 	"Resources": {
 		"MonoToMicroVPC": {
@@ -297,7 +301,9 @@
 			"DependsOn": "DBInstance",
 			"Properties": {
 				"InstanceType": "t2.micro",
-				"ImageId": "ami-0b898040803850657",
+				"ImageId": {
+				    "Ref": "LatestAmiId"
+                },
 				"KeyName": {
 					"Ref": "KeyName"
 				},
