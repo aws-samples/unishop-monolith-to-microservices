@@ -375,7 +375,7 @@ Resource Path: /login
   ```diff
   Integration type: HTTP
   Use HTTP proxy integration: Not ticked
-  HTTP method: DELETE
+  HTTP method: GET
   Endpoint URL: [baseURL copied from CloudFormation output]/unicorns/basket/{uuid}
   Content handling: Passthrough
   Use default timeout: Ticked 
