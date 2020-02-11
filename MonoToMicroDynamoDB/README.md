@@ -13,7 +13,7 @@ There are 2 ways you can create DynamoDB table, you can use the below **DynamoDB
 **1.1** Download CloudFormation template from [here](../MonoToMicroAssets/MonoToMicroCFDDB.yaml) and save it locally
 
 ```diff
-Save file name: MonoToMicroDDBCF.template
+Save file name: MonoToMicroDDBCF.ymal
 ```
 
 **1.2** Log into your AWS console.
