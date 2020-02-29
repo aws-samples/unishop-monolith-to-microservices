@@ -93,6 +93,14 @@ Permissions: Use an existing role from the dropdown list
 Handler: com.monoToMicro.Lambda.UnicornBasketImpl::getUnicornsBasket
 ```
 
+To test this last one, use a payload with the UUID of the basket
+
+~~~
+{
+  "uuid": "4b3fc86b-81d0-4614-920e-8184063acf2d"
+}
+~~~
+
 </details>
 
 <details>

@@ -15,6 +15,8 @@ define our required resources as code, enabling a versioned and repeatable mecha
 Step 1: Backend deployment
 </summary>
 <br>
+
+**IMPORTANT:** If you are running this workshop via an AWS or AWS Partner managed event, the enviroment might be already deployed for you. Check that with your event host. If confirmed, in such case skip to the Step 2 below, because the back-end has been to be deployed already.
 	
 **1.1** Download the CloudFormation template from [here](../MonoToMicroAssets/MonoToMicroCF.template) to your local machine.
 ```diff
@@ -75,10 +77,10 @@ Step 2: Verify backend deployment
 <br> 
 
 ```diff
-- NOTE: Make sure CloudFormation deployment is finished and you see the "CREATE_COMPLETE" message
+- NOTE: Make sure CloudFormation deployment is finished and you see the "CREATE_COMPLETE" message.
 ```
 
-**2.1** Click on the Outputs tab and copy the PublicDns value. This is the DNS name for the EC2 instance that is running our **Unishop** application. We will use that DNS name for accessing the application and later for hooking it up with API Gateway.
+**2.1** Visit the [CloudFormation home page](https://console.aws.amazon.com/cloudformation/home) and click on the name of the stack corresponding to your deployment. Click on the Outputs tab and copy the PublicDns value. This is the DNS name for the EC2 instance that is running our **Unishop** application. We will use that DNS name for accessing the application and later for hooking it up with API Gateway.
 
 ![](../MonoToMicroAssets/assets1024/CloudFormationStep9.png)
 
@@ -109,7 +111,7 @@ For the frontend we will use S3 static web hosting. It is a simple yet powerful 
 
 **3.3** Select the **Use this bucket to host a website**. Use **index.html** and **error.html** as the index and error documents. Press **save**. 
 ```diff
-Tick: "Use this basket to host a web site"
+Tick: "Use this bucket to host a web site"
 Index document: index.html
 Error document: error.html
 ```
@@ -158,6 +160,15 @@ Once uploaded, you can refresh your browser and you should see content served fr
 - Note: you first need to register and then login in order to add Unicorns to your basket.  
 ```
 ![](../MonoToMicroAssets/assets1024/S3StaticSite20.png)  
+
+Open the Developer Console of your browser, and check the outputs.
+
+**4.6** Play with the application.
+
+1. Register yourself into the application. You just need to provide an e-mail, and at this point to simplify our interactions it doesn't need to be a valid one. However, **be sure of taking note of it**. We are going to need it later.
+2. Check the output at your browser's developer console. You will get something like `{uuid: "f031e124-f75a-4112-1234-78abbcc9d070", email: "<provided email>} "User Signed Up"`. Take note of this UUID as this is going to identify this user and it's basket.
+3. Log in into the application. You just need to provide the registered email. Check that the message `[] "Got the cart"` will appear.
+4. Add/remove items to your shopping cart. Check the outputs at the browser's console.
 
 </details>
 
