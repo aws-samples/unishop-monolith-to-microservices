@@ -23,41 +23,65 @@ Save file name: MonoToMicroCF.template
 
 **1.2** Log into your AWS console. 
 
-**1.3** Navigate to CloudFormation.  
+**1.3** Navigate to EC2 Console.  
+<br>
+![](../MonoToMicroAssets/assets1024/EC2KPStep1.png)
+
+**1.4** Click **Key Pairs**.  
+<br>
+![](../MonoToMicroAssets/assets1024/EC2KPStep2.png)
+
+**1.5** Click **Create key pair** to start the process.  
+<br>
+![](../MonoToMicroAssets/assets1024/EC2KPStep3.png)
+
+**1.6** Enter a name for the Key Pair. Note this name, you will need it later. 
+<br>
+![](../MonoToMicroAssets/assets1024/EC2KPStep4.png)
+
+**1.7** Select pem to use this key with OpenSSH or PPK for use with Putty.
+<br>
+![](../MonoToMicroAssets/assets1024/EC2KPStep5.png)
+
+**1.8** Wait for the the Success Message for the key pair creation. 
+<br>
+![](../MonoToMicroAssets/assets1024/EC2KPStep6.png)
+
+**1.9** Navigate to CloudFormation.  
 <br>
 ![](../MonoToMicroAssets/assets1024/CloudFormationStep1.png)
 
-**1.4** Click **Create stack** to start the process.  
+**1.10** Click **Create stack** to start the process.  
 <br>
 ![](../MonoToMicroAssets/assets1024/CloudFormationStep2.png)
 
-**1.5** Select **Upload a template file** and **Choose file** to upload the file that you've downloaded in step 1.1. Finally, click **Next** 
+**1.11** Select **Upload a template file** and **Choose file** to upload the file that you've downloaded in step 1.1. Finally, click **Next** 
 <br>
 ![](../MonoToMicroAssets/assets1024/CloudFormationStep3.png) 
 
-**1.6** Enter a name for the stack
+**1.12** Enter a name for the stack and select the key pair that you previously made from the drop down under **Key Name**.
 ```diff
 Stack Name: MonoToMicro
 ```
 
 ![](../MonoToMicroAssets/assets1024/CloudFormationStep4.png)  
 
-**1.7** Click **Next** to skip the stack configuration options, as we will use defaults in this section.  
+**1.13** Click **Next** to skip the stack configuration options, as we will use defaults in this section.  
 <br>
 ![](../MonoToMicroAssets/assets1024/CloudFormationStep5.png)
 
-**1.8** Review the details for creating the stack, tick the **I acknowledge that AWS CloudFormation might create IAM resources** box and click **Create Stack**.  
+**1.14** Review the details for creating the stack, tick the **I acknowledge that AWS CloudFormation might create IAM resources** box and click **Create Stack**.  
 <br>
 ![](../MonoToMicroAssets/assets1024/CloudFormationStep6.png)
 
-**1.9** The CloudFormation stack creation process will take up to 30 minutes to complete. The VPC resources will be
+**1.15** The CloudFormation stack creation process will take up to 30 minutes to complete. The VPC resources will be
 created fairly quickly. The database and EC2 resources will be created next while code will be cloned and build process will be initiated (which will take the majority of the time).
 While the resources are being created, you will see the following screen and events depicted below. If you are having
 issues, call a workshop instructor to help you troubleshoot.  
 <br>
 ![](../MonoToMicroAssets/assets1024/CloudFormationStep7.png)
 
-**1.10** Once the stack creation process completes, you should see the following **CREATE_COMPLETE** message.  
+**1.16** Once the stack creation process completes, you should see the following **CREATE_COMPLETE** message.  
 <br>
 ![](../MonoToMicroAssets/assets1024/CloudFormationStep8.png)
 
