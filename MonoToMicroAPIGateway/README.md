@@ -37,7 +37,7 @@ Click on **Get Started** to build your first API.
 
 **1.4** To configure the API, use the following configuration parameters and click **Create API**.
 ```diff
-Protocol: REST
+API Type/Protocol: REST API
 Create: New API
 API name: Unicorns
 Endpoint Type: Edge optimized
@@ -54,7 +54,7 @@ Endpoint Type: Edge optimized
 
   <details>
   <summary>	
-  <b>Step 2.1: Create Unicron resources</b>
+  <b>Step 2.1: Create Unicorn resources</b>
   </summary>
     <br>
   
@@ -150,6 +150,16 @@ Resource Path: /login
 <summary>	
 <b>Step 3: Create methods</b>
 </summary>
+
+You don't need necessarily follow the order of creation of the methods. So, for instance, if you have already tried the application, have created an user, and have some products in your shopping cart, then you might want to follow this route:
+* Do 3.1.7 through 3.1.10 - `/user/login:POST` to execute a login using the email that you have already provided and then retrieving the user UUID. Having the user UUID is going to help you to interact with the shopping cart
+* Do 3.2.1 through 3.2.5  - `/unicorns:GET` to get the list of available products. Having the products UUID is going to help you to add products to the basket via the API
+* Do 3.2.14 through 3.2.17 - `/unicorns/basket/{uuid}:GET` to get the current content in an existing shopping cart. For the {uuid} field, use your user's uuid.
+* Get back and do the other resources/methods:
+  * 3.1.1 through 3.1.6 - `/user:POST` to create a new user
+  * 3.2.6 through 3.2.9 - `/unicorns/basket:POST` to add unicorn products to the basket. You can check the effect on the application website.
+  * 3.2.10 through 3.2.13 - `/unicorns/basket:DELETE`. You can also check the effect on the application website.
+  * Finally, go to 3.2.18 and double check if you have created all required resources and methods
 <br>
   
   <details>
@@ -249,18 +259,18 @@ Resource Path: /login
    
    <details>
   <summary>	
-  <b>Step 3.2: Unicron methods</b>
+  <b>Step 3.2: Unicorns methods</b>
   </summary>
  
-  On the **/unicorn** resource we will create 4 methods
+  On the **/unicorns** resource we will create 4 methods
   <br>
   **1. Get unicorns**
   <br>
   **2. Add unicorn to basket**
   <br>
-  **3. Remove unicron from basket**
+  **3. Remove unicorns from basket**
   <br>
-  **4. Get basket**
+  **4. Get the basket**
   
   **3.2.1** On the resources left side menu select the **/unicorns** resource and from the **Actions** menu select **Create Method**.
   <br>
@@ -394,10 +404,10 @@ Resource Path: /login
   * /unicorns/basket
   * /unicorns/basket/{uuid}
   In addition, we've created 
-  * GET method to get the list of unicorn
-  * POST method to add a unicron to basket
-  * DELETE method to remove unicorn from basket
-  * GET method to retrive the user basket 
+  * GET method to get the list of unicorn (under /unicorns)
+  * POST method to add a unicorn to basket (under /unicorns/basket)
+  * DELETE method to remove unicorn from basket (under /unicorns/basket)
+  * GET method to retrive the user basket (under /unicorns/basket/{uuid})
   
   **3.2.19** Once completed all resources and methods set up your API Gateway dashboard should look as follows  
   
@@ -416,7 +426,7 @@ Resource Path: /login
 
 At this point, we've configured our API Gateway to front our legacy application! But we have one more step to complete. In order for us to access the API publicly, we need to deploy them. 
 
-**4.1** before you deploy, make sure to enable CORS again on /user and /unicrons resources as the newly created methods do not inherit the resource CORS configuration by default. To enable CORS again, select a resource on the left side resource menu, click on the **Actions** button and select **Enable CORS**. Repeat the process for all resources! 
+**4.1** before you deploy, make sure to enable CORS again on /user and /unicorns resources as the newly created methods do not inherit the resource CORS configuration by default. To enable CORS again, select a resource on the left side resource menu, click on the **Actions** button and select **Enable CORS**. Repeat the process for all resources! 
 ```diff
 - Note: This step is mandatory otherwise you will get CORS errors and the site will not work
 ```
@@ -445,8 +455,9 @@ You should see the below response
 <br>
 ![](../MonoToMicroAssets/assets1024/APIGatewayDeployResults.png)  
 
-**4.6** Lastly, let's point the frontend to use the new URL provided by API Gateway. Update config.json with the API gateway deployment URL and upload it to S3 static website. 
-Once uploaded, you can refresh your browser and you should see content served from the new URL  
+**4.6** Lastly, let's point the frontend to use the new URL provided by API Gateway. Update config.json with the API gateway deployment URL and upload it to S3 static website.   
+
+Once uploaded, you can refresh your browser and you should see content served from the new URL. You can check that on your browser's developer console, by checking that the *host* points to your API URL.
 ```diff
 - Note: make sure the URL is a secured using HTTPS
 - Note: make sure the file is uploaded with read public access, otherwise the site will not load properly!

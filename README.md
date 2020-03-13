@@ -41,6 +41,8 @@ If you planning on browsing the code locally we recommend you will use an IDE
     * IntelliJ IDEA: https://www.jetbrains.com/idea/download/
 * **Gradle (optional)**: If you planning on compiling the code yourself you will need Gradle installed locally. Download Gradle from https://gradle.org/install/
 
+Also, as part of the mechanisms to run and troubleshoot your actions during this workshop, be sure to check the messages on your browser developer console (In general you can find it via right click+Inspect and then clicking on the tab Console. Check your browser's instructions).
+
 </details>
 
 <details>
@@ -49,10 +51,11 @@ If you planning on browsing the code locally we recommend you will use an IDE
 </summary>
 <br> 
 We've broken the workshop down into easy to follow and digestible chunks, which walks you through the process of
-transforming a monolithic application to a microservices-based application.
-   
+transforming a monolithic application to a microservices-based application.  
+
 In **Part 1**, we will cover the monolithic application. It is a **traditional** Spring Boot Java application which will be deployed on an EC2 instance and connect to RDS MySQL database. The frontend will be hosted on S3 **Static web hosting**, it is a simple yet powerful hosting solution which auto-scale and meet growing needs automatically. Once deployed, the **Unishop** will be accessible to the outside
 world.
+* **IMPORTANT**: If you are running this workshop via an AWS or AWS Partner managed event, you may need to skip PART 1 because the environment might be already deployed. In that case, executing the cloud Check that with your host.
 
 In **Part 2-5** we will extract domain-based functionality and build it as a standalone microservice using Lambda and DynamoDB. In this case, that will be the Unishop shopping cart functionality.
 
