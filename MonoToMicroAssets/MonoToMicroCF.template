@@ -4,15 +4,10 @@
 
 	},
 	"Parameters": {
-		"KeyName": {
-			"Description": "Name of an existing EC2 KeyPair to enable SSH access to the instance",
-			"Type": "AWS::EC2::KeyPair::KeyName",
-			"ConstraintDescription": "must be the name of an existing EC2 KeyPair.",
-			"AllowedPattern": ".+"
-		},
 		  "LatestAmiId":{
             "Type": "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
-            "Default": "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2"
+            "Default": "/aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2",
+						"Description" : "Use an AMI of your choosing, we recommend to use the latest available"
 	    }
 	},
 	"Resources": {
@@ -302,11 +297,8 @@
 			"Properties": {
 				"InstanceType": "t2.micro",
 				"ImageId": {
-				    "Ref": "LatestAmiId"
-                },
-				"KeyName": {
-					"Ref": "KeyName"
-				},
+					"Ref": "LatestAmiId"
+        },
 				"SubnetId": {
 					"Ref": "MonoToMicroSubnet1"
 				},
