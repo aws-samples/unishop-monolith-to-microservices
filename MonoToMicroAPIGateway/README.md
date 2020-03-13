@@ -151,15 +151,16 @@ Resource Path: /login
 <b>Step 3: Create methods</b>
 </summary>
 
-You don't need necessarily follow the order of creation of the methods. So, for instance, if you have already tried the application, have created an user, and have some products in your shopping cart, then you might want to follow this route:
-* Do 3.1.7 through 3.1.10 - `/user/login:POST` to execute a login using the email that you have already provided and then retrieving the user UUID. Having the user UUID is going to help you to interact with the shopping cart
-* Do 3.2.1 through 3.2.5  - `/unicorns:GET` to get the list of available products. Having the products UUID is going to help you to add products to the basket via the API
-* Do 3.2.14 through 3.2.17 - `/unicorns/basket/{uuid}:GET` to get the current content in an existing shopping cart. For the {uuid} field, use your user's uuid.
-* Get back and do the other resources/methods:
-  * 3.1.1 through 3.1.6 - `/user:POST` to create a new user
-  * 3.2.6 through 3.2.9 - `/unicorns/basket:POST` to add unicorn products to the basket. You can check the effect on the application website.
-  * 3.2.10 through 3.2.13 - `/unicorns/basket:DELETE`. You can also check the effect on the application website.
-  * Finally, go to 3.2.18 and double check if you have created all required resources and methods
+```diff
++ NOTE
+We do recommend that you will follow the steps defined below, however, you can implement a different 
+order of methods creation. For example, if you have already registered through the application UI, 
+have created an user, and have some products in your shopping cart, then you might want to start 
+with the user resource. 
++ Keep in mind, once you are done please check task 3.2.18 and make sure all resources and methods 
++ are created
+```  
+  
 <br>
   
   <details>
