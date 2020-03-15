@@ -150,16 +150,6 @@ Resource Path: /login
 <summary>	
 <b>Step 3: Create methods</b>
 </summary>
-
-```diff
-+ NOTE
-We do recommend that you will follow the steps defined below, however, you can implement a different 
-order of methods creation. For example, if you have already registered through the application UI, 
-have created an user, and have some products in your shopping cart, then you might want to start 
-with the user resource. 
-+ Keep in mind, once you are done please check task 3.2.18 and make sure all resources and methods 
-+ are created
-```  
   
 <br>
   
