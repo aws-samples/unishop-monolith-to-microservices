@@ -1,3 +1,9 @@
+```diff
++ **IMPORTANT**: If you are running this workshop via an AWS or AWS Partner managed 
++ event (using Event Engine), you may need to skip start from task 2.1 in 
++ this part (MonoToMicroLegacy) as the environment is, most likely, already deployed.
+```
+
 # Legacy Monolithic Application Deployment
 Our Unishop legacy application is a Spring Boot Java application connected to a MySQL database with frontend written
 using bootstrap.
