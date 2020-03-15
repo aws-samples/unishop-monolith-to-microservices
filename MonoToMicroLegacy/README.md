@@ -173,7 +173,7 @@ Open the Developer Console of your browser, and check the outputs.
 
 1. Register yourself into the application. You just need to provide an e-mail, and at this point to simplify our interactions it doesn't need to be a valid one. However, **be sure of taking note of it**. We are going to need it later.
 2. Check the output at your browser's developer console. You will get something like `{uuid: "f031e124-f75a-4112-1234-78abbcc9d070", email: "<provided email>} "User Signed Up"`. Take note of this UUID as this is going to identify this user and it's basket.
-3. Log in into the application. You just need to provide the registered email. Check that the message `[] "Got the cart"` will appear.
+3. Log in into the application. You just need to provide the registered email. Check that the message `[] "Got the cart"` will appear in console.
 4. Add/remove items to your shopping cart. Check the outputs at the browser's console.
 
 </details>
