@@ -107,6 +107,13 @@ The TO-BE architecture, would not change the AS-IS architecture, however, we wil
 
 In this section we will deploy our legacy application using CloudFormation template. 
 For this portion, please work through this [exercise](/MonoToMicroLegacy).  
+
+```diff
++ **IMPORTANT**: If you are running this workshop via an AWS or AWS Partner managed 
++ event (using Event Engine), you may need to skip start from task 2.1 in 
++ Part 1 (MonoToMicroLegacy) as the environment is, most likely, already deployed.
+```
+
 </details>
 
 <details>
