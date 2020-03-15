@@ -180,7 +180,7 @@ Resource Path: /login
   Integration type: HTTP
   Use HTTP proxy integration: Not ticked
   HTTP method: POST
-  Endpoint URL: [baseURL copied from CloudFormation output]/user
+  Endpoint URL: [base URL copied from CloudFormation output]/user
   Content handling: Passthrough
   Use default timeout: Ticked 
   ```
@@ -219,7 +219,7 @@ Resource Path: /login
   Integration type: HTTP
   Use HTTP proxy integration: Not ticked
   HTTP method: POST
-  Endpoint URL: [baseURL copied from CloudFormation output]/user/login
+  Endpoint URL: [base URL copied from CloudFormation output]/user/login
   Content handling: Passthrough
   Use default timeout: Ticked 
   ```
@@ -276,7 +276,7 @@ Resource Path: /login
   Integration type: HTTP
   Use HTTP proxy integration: Not ticked
   HTTP method: GET
-  Endpoint URL: [baseURL copied from CloudFormation output]/unicorns
+  Endpoint URL: [base URL copied from CloudFormation output]/unicorns
   Content handling: Passthrough
   Use default timeout: Ticked 
   ```
@@ -301,7 +301,7 @@ Resource Path: /login
   Integration type: HTTP
   Use HTTP proxy integration: Not ticked
   HTTP method: POST
-  Endpoint URL: [baseURL copied from CloudFormation output]/unicorns/basket
+  Endpoint URL: [base URL copied from CloudFormation output]/unicorns/basket
   Content handling: Passthrough
   Use default timeout: Ticked 
   ```
@@ -338,7 +338,7 @@ Resource Path: /login
   Integration type: HTTP
   Use HTTP proxy integration: Not ticked
   HTTP method: DELETE
-  Endpoint URL: [baseURL copied from CloudFormation output]/unicorns/basket
+  Endpoint URL: [base URL copied from CloudFormation output]/unicorns/basket
   Content handling: Passthrough
   Use default timeout: Ticked 
   ```
@@ -377,7 +377,7 @@ Resource Path: /login
   Integration type: HTTP
   Use HTTP proxy integration: Not ticked
   HTTP method: GET
-  Endpoint URL: [baseURL copied from CloudFormation output]/unicorns/basket/{uuid}
+  Endpoint URL: [base URL copied from CloudFormation output]/unicorns/basket/{uuid}
   Content handling: Passthrough
   Use default timeout: Ticked 
   ```
