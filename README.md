@@ -41,7 +41,7 @@ If you planning on browsing the code locally we recommend you will use an IDE
     * IntelliJ IDEA: https://www.jetbrains.com/idea/download/
 * **Gradle (optional)**: If you planning on compiling the code yourself you will need Gradle installed locally. Download Gradle from https://gradle.org/install/
 
-Also, as part of the mechanisms to run and troubleshoot your actions during this workshop, be sure to check the messages on your browser developer console (In general you can find it via right click+Inspect and then clicking on the tab Console. Check your browser's instructions).
+You can use your browser developer console as a tool to troubleshoot your actions during this workshop (mainly around CORSS origin issues), right click+inspect and then clicking on the Console tab or check your browser's specific instructions.
 
 </details>
 
