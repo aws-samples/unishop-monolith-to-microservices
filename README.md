@@ -55,7 +55,12 @@ transforming a monolithic application to a microservices-based application.
 
 In **Part 1**, we will cover the monolithic application. It is a **traditional** Spring Boot Java application which will be deployed on an EC2 instance and connect to RDS MySQL database. The frontend will be hosted on S3 **Static web hosting**, it is a simple yet powerful hosting solution which auto-scale and meet growing needs automatically. Once deployed, the **Unishop** will be accessible to the outside
 world.
-* **IMPORTANT**: If you are running this workshop via an AWS or AWS Partner managed event, you may need to skip PART 1 because the environment might be already deployed. In that case, executing the cloud Check that with your host.
+
+```diff
++ **IMPORTANT**: If you are running this workshop via an AWS or AWS Partner managed 
++ event (using Event Engine), you may need to skip start from task 2.1 in 
++ Part 1 (MonoToMicroLegacy) as the environment is, most likely, already deployed.
+```
 
 In **Part 2-5** we will extract domain-based functionality and build it as a standalone microservice using Lambda and DynamoDB. In this case, that will be the Unishop shopping cart functionality.
 
