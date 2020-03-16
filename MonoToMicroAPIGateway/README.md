@@ -310,7 +310,7 @@ Resource Path: /login
   
   **3.2.8** Once the method configuration is saved we can test the integration with the legacy backend. Click the **TEST** button
   
-  **3.2.9** Copy and past the below JSON into the request body and press the **Test** button. If all configured correctly you should get a **200** response with **no data** in the body
+  **3.2.9** Copy and paste the below JSON into the request body and press the **Test** button. If all configured correctly you should get a **200** response with **no data** in the body
   ```diff
   - Make sure you replace the values in the below JSON to reflect the unicorn you wish to add to basket
   ```
@@ -347,7 +347,7 @@ Resource Path: /login
   
   **3.2.12** Once the method configuration is saved we can test the integration with the legacy backend. Click the **TEST** button
   
-  **3.2.13** Copy and past the below JSON into the request body and press the **Test** button. If all configured correctly you should get a **200** response with **no data** in the body
+  **3.2.13** Copy and paste the below JSON into the request body and press the **Test** button. If all configured correctly you should get a **200** response with **no data** in the body
   ```diff
   - Make sure you replace the values in the below JSON to reflect the unicorn you wish to remove from basket
   ```
