@@ -2,7 +2,7 @@
 Using microservices architecture gives you freedom to choose different technologies for your implementation. We will use
 DynamoDB as our database for our shopping cart microservice. DynamoDB is fast key/value store which can hold shopping cart information and enable quick reads and writes.
 
-There are 2 ways you can create DynamoDB table, you can use the below **DynamoDB deployment using CloudFormation** section which is using, as the name suggest, CloudFormation for deployment. Or, you can create the table manually (see **DynamoDB manual deployment** section)
+<!--There are 2 ways you can create DynamoDB table, you can use the below **DynamoDB deployment using CloudFormation** section which is using, as the name suggest, CloudFormation for deployment. Or, you can create the table manually (see **DynamoDB manual deployment** section)-->
 
 <details>
 <summary>  
@@ -59,6 +59,7 @@ RoleForLambda: This is the IAM role that will be used with our Lambda function.
 
 </details>
 
+<!--
 OR
     
 <details>
@@ -103,3 +104,4 @@ As you are creating the table by hand, we are going to use this moment for you t
 ![](../MonoToMicroAssets/assets1024/DDBStep4.png)  
 
 </details>
+-->
