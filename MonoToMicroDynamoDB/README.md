@@ -58,7 +58,6 @@ RoleForLambda: This is the IAM role that will be used with our Lambda function.
 ```
 
 </details>
-
 <!--
 OR
     
@@ -90,14 +89,16 @@ Click the **Create** button
 
 **1.5** Create the role for your Lambda functions to be able to access DynamoDB  
 
-As you are creating the table by hand, we are going to use this moment for you to create a IAM Role that will give your AWS Lambda functions permissions to access the DynamoDB table that you have just created.
+As you are creating the table manually, we will need to create an IAM Role that will give our AWS Lambda functions permissions to access the DynamoDB table that you have just created.
 
-1.5.1. Take note of the ARN of the recently created DynamoDB table  
-1.5.2. Visit the [IAM home page](https://console.aws.amazon.com/iam/home)  
-1.5.3. Create a new role with the trusted entity `AWS Service` and use case `Lambda`  
-1.5.4. For the permissions section, attach the policy `AWSLambdaBasicExecutionRole` 
-1.5.5. Name the role as `MonoToMicroLambdaRole` and create the role   
-1.5.6. Select that role and add an inline policy that gives it the following access permissions to **your** DynamoDB table: GetItem, Query, Scan, DeleteItem, PutItem, UpdateItem. Name it as DynamoDBPermissions.
+1.5.1 Take note of the ARN for the newly created DynamoDB table  
+1.5.2 Visit the [IAM home page](https://console.aws.amazon.com/iam/home)  
+1.5.3 From the left side menus select **Roles** and then press the **Create role**  
+1.5.4 Using **AWS Service** and **Lambda** use case then click **Next**  
+1.5.5 In the permissions section, search for **AWSLambdaBasicExecutionRole** and select it. Click **Next**
+1.5.6 Skip the **Tag** section
+1.5.7 Name the role as **MonoToMicroLambdaRole** and create the role   
+1.5.8 Select that role and add an inline policy that gives it the following access permissions to **your** DynamoDB table: GetItem, Query, Scan, DeleteItem, PutItem, UpdateItem. Name it as DynamoDBPermissions.
   
 **1.6** You are DONE!  
 
