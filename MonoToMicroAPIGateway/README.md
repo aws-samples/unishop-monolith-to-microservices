@@ -415,7 +415,7 @@ Resource Path: /login
 </summary>
 <br>
 
-At this point, we've configured our API Gateway to front our legacy application! But we have one more step to complete. In order for us to access the API publicly, we need to deploy them. 
+At this point, we've configured our API Gateway to front our legacy application, but, we have one more step to complete. In order for us to access the API publicly, we need to deploy them. 
 
 **4.1** before you deploy, make sure to enable CORS again on /user and /unicorns resources as the newly created methods do not inherit the resource CORS configuration by default. To enable CORS again, select a resource on the left side resource menu, click on the **Actions** button and select **Enable CORS**. Repeat the process for all resources! 
 ```diff
