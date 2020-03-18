@@ -68,7 +68,7 @@ CREATE TABLE  `unishop`.`unicorn_user` (
   	PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=UTF8MB4;
 
-INSERT INTO `unishop`.`unicorns` (uuid, name, description, price, image) VALUES (UUID(),'UnicornFlaot', 'Big Unicorn Float! Giant Glitter Unicorn Pool Floaty', 100, 'UnicornFlaot');
+INSERT INTO `unishop`.`unicorns` (uuid, name, description, price, image) VALUES (UUID(),'UnicornFloat', 'Big Unicorn Float! Giant Glitter Unicorn Pool Floaty', 100, 'UnicornFloat');
 INSERT INTO `unishop`.`unicorns` (uuid, name, description, price, image) VALUES (UUID(),'UnicornHipHop', 'Rainbow Hip Hop Unicorn With Sunglasses Kids Tshirt', 100, 'UnicornHipHop');
 INSERT INTO `unishop`.`unicorns` (uuid, name, description, price, image) VALUES (UUID(),'UnicornPartyDress', 'Girls Unicorn Party Dress - Tutu Pastel Rainbow Princess Power!', 100, 'UnicornPartyDress');
 INSERT INTO `unishop`.`unicorns` (uuid, name, description, price, image) VALUES (UUID(),'UnicornGlitter', 'Unicorn Glitter Backpack - Shop for Unique Unicorn Gifts for Girls!', 100, 'UnicornGlitter');
