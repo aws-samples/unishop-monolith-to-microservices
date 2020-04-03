@@ -255,12 +255,13 @@ Modernizing legacy applications is a necessity, there are few approaches you can
 ```diff
 - Before you leave, make sure you delete the below resources so you won’t be charged for on going usage!
 ```
-
-* **Delete the CloudFormation stacks for the legacy application**
+* **Delete the S3 buckets with all content**
+* **Delete the Lambda functions**
+* **Delete the API gateway**
 * **Delete the CloudFormation stacks for DynamoDB unless you've created the database manually, in that case you need to manually delete the table**
+* **Delete the CloudFormation stacks for the legacy application**
 * **Remove the IAM role created for Lambda/DynamoDB**
 * **Remove the keypair if created**
-* **Delete S3 bucket with all content**
 
 </details>
 
