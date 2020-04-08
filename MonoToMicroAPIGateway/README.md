@@ -31,7 +31,7 @@ Get basket: GET: [baseUrl]/unicorns/basket/{userUuid}
 ![](../MonoToMicroAssets/assets1024/APIGatewayStep1.png)  
 
 **1.3** If you have never used the API Gateway service before, you will be presented with the initial page depicted below.
-Click on **Get Started** to build your first API.  
+Click on **Build** under the **REST API** section to build your first API.  
 
 ![](../MonoToMicroAssets/assets1024/APIGatewayStep2.png)  
 
