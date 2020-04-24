@@ -13,7 +13,7 @@ DynamoDB as our database for our shopping cart microservice. DynamoDB is fast ke
 **1.1** Download CloudFormation template from [here](../MonoToMicroAssets/MonoToMicroCFDDB.yaml) and save it locally
 
 ```diff
-Save file name: MonoToMicroDDBCF.ymal
+Save file name: MonoToMicroDDBCF.yaml
 ```
 
 **1.2** Log into your AWS console.
