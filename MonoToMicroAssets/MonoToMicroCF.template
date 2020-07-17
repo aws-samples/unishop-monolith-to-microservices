@@ -376,10 +376,14 @@
 								"ASSETS_RANDOM_NAME=", {
 									"Ref": "AssetBucket"
 								}, "\n",
+								"declare -i EXIT_CODE=0\n",
 								"aws s3 cp /home/ec2-user/MonoToMicro/MonoToMicroUI s3://$UI_RANDOM_NAME/ --recursive --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers\n",
+								"EXIT_CODE+=$?\n",
 								"aws s3 cp /home/ec2-user/MonoToMicro/MonoToMicroLambda/build/libs s3://$ASSETS_RANDOM_NAME/ --recursive --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers\n",
+								"EXIT_CODE+=$?\n",
 								"java -jar /home/ec2-user/MonoToMicro/MonoToMicroLegacy/build/libs/MonoToMicroLegacy-0.0.1-SNAPSHOT.jar &\n",
-								"/opt/aws/bin/cfn-signal -e $?",
+								"EXIT_CODE+=$?\n",
+								"/opt/aws/bin/cfn-signal -e $EXIT_CODE",
 									" --stack ", { "Ref": "AWS::StackName" },
 									" --resource EC2Instance",
 									" --region ", { "Ref" : "AWS::Region" }, "\n"
