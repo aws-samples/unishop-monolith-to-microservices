@@ -336,7 +336,82 @@
 			},
 			"Metadata" : {
 				"AWS::CloudFormation::Init" : {
-                    "config": {
+                    "configSets" : {
+                        "default" : [ 
+                            "update", 
+                            "install" , 
+                            "configure", 
+                            "create-service-files",
+                            "start-service" 
+                        ]
+                    },
+                    "update" : {
+                        "commands" : {
+                            "update" : { "command" : "sudo yum update -y" }
+                        }
+                    },
+                    "install" : {
+                        "packages" : {
+                            "rpm" : {
+                                "https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm" : []
+                            },
+                            "yum" : {
+                                "amazon-cloudwatch-agent" : [],
+                                "git" : [],
+                                "java-1.8.0-openjdk-devel" : [],
+                                "mariadb" : [],
+                                "unzip" : []
+                            }
+                        }
+                    },
+                    "configure" : {
+                        "commands" : {
+                            "0-clone-repo" : { "command" :
+                                "git clone https://github.com/aws-samples/unishop-monolith-to-microservices.git /home/ec2-user/MonoToMicro"
+                            },
+                            "1-create-tables" : { "command" :
+                                    { "Fn::Join" : ["",[ 
+                                    "sudo mysql -u MonoToMicroUser -h ", 
+                                    {"Fn::GetAtt": ["DBInstance", "Endpoint.Address"] },
+                                    " -P 3306 -pMonoToMicroPassword < /home/ec2-user/MonoToMicro/MonoToMicroLegacy/database/create_tables.sql\n"
+                                    ]]}
+                            },
+                            "2-exportDbEndpoint" : { "command" :
+                                { "Fn::Join" : ["",[ 
+                                "export MONO_TO_MICRO_DB_ENDPOINT=", 
+                                { "Fn::GetAtt": ["DBInstance", "Endpoint.Address"]}
+                                ]]}
+                            },
+                            "3-gradle-install-build" :  { "command" :
+                                { "Fn::Join" : [ "",[
+                                    "cd /home/ec2-user/\n",
+                                    "sudo wget https://services.gradle.org/distributions/gradle-5.6.3-bin.zip\n",
+                                    "sudo unzip -d /home/ec2-user/ /home/ec2-user/gradle-5.6.3-bin.zip\n",
+                                    "export PATH=$PATH:/home/ec2-user/gradle-5.6.3/bin\n",
+                                    "cd /home/ec2-user/MonoToMicro/MonoToMicroLegacy\n",
+                                    "gradle clean build\n",
+                                    "cd /home/ec2-user/MonoToMicro/MonoToMicroLambda\n",
+                                    "gradle clean build\n"
+                                ]]}
+                            },
+                            "4-populate-buckets" : { "command" :
+                                    { "Fn::Join" : [ "",[
+                                        "AWS_DEFAULT_REGION=", {
+                                            "Ref": "AWS::Region"
+                                        }, "\n",
+                                        "UI_RANDOM_NAME=", {
+                                            "Ref": "UIBucket"
+                                        }, "\n",
+                                        "ASSETS_RANDOM_NAME=", {
+                                            "Ref": "AssetBucket"
+                                        }, "\n",
+                                        "aws s3 cp /home/ec2-user/MonoToMicro/MonoToMicroUI s3://$UI_RANDOM_NAME/ --recursive --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers\n",
+                                        "aws s3 cp /home/ec2-user/MonoToMicro/MonoToMicroLambda/build/libs s3://$ASSETS_RANDOM_NAME/ --recursive --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers\n"
+                                    ]]}
+                            }
+                        }
+                    },
+                    "create-service-files": {
                         "files" : {
                             "/etc/systemd/system/mono2micro.service" : {
                                 "encoding" : "plain",
@@ -416,7 +491,7 @@
                                     ]},
                                     "mode"  : "000555",
                                     "group" : "ec2-user",
-                                    "user" : "ec2-user"
+                                    "user"  : "ec2-user"
                             },
                             "/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json" : {
                                 "content" : { "Fn::Join" : [ "", [
@@ -442,8 +517,20 @@
                                 "user"  : "ec2-user"
                             }
                         }
+                    },
+                    "start-service" : {
+                        "commands" : {
+                            "0-start-service" : { "command" :
+                                    { "Fn::Join" : [ "",[
+                                    "sudo systemctl daemon-reload\n",
+                                    "sudo systemctl enable mono2micro\n",
+                                    "sudo systemctl start mono2micro\n",
+                                    "sudo amazon-cloudwatch-agent-ctl -a fetch-config -s -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json\n"
+                                    ]]}
+                                }
+                        }
                     }
-				}
+                }
 			},
 			"Properties": {
 				"InstanceType": "t3.small",
@@ -464,55 +551,18 @@
 						"Fn::Join": ["",
 							[
 								"#!/bin/bash\n",
-								"Database=", {
-									"Fn::GetAtt": ["DBInstance", "Endpoint.Address"]
-								}, "\n",
-								"sudo yum update -y\n",
-								"sudo yum install -y aws-cfn-bootstrap\n",
-								"sudo yum install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm\n",
-								"sudo yum install amazon-cloudwatch-agent -y\n",
-								"sudo yum -y install mysql\n",
-								"sudo yum -y install java-1.8.0-openjdk-devel\n",
-								"sudo yum -y install unzip\n",
-								"sudo yum install git -y\n",
-								"git clone https://github.com/aws-samples/unishop-monolith-to-microservices.git /home/ec2-user/MonoToMicro\n",
-								"sudo mysql -u MonoToMicroUser -h", {
-									"Fn::GetAtt": ["DBInstance", "Endpoint.Address"]
-								}, " -P 3306 -pMonoToMicroPassword < /home/ec2-user/MonoToMicro/MonoToMicroLegacy/database/create_tables.sql\n",
-								"export MONO_TO_MICRO_DB_ENDPOINT=", {
-									"Fn::GetAtt": ["DBInstance", "Endpoint.Address"]
-								}, "\n",
-								"cd /home/ec2-user/\n",
-								"sudo wget https://services.gradle.org/distributions/gradle-5.6.3-bin.zip\n",
-								"sudo unzip -d /home/ec2-user/ /home/ec2-user/gradle-5.6.3-bin.zip\n",
-								"export PATH=$PATH:/home/ec2-user/gradle-5.6.3/bin\n",
-								"cd /home/ec2-user/MonoToMicro/MonoToMicroLegacy\n",
-								"gradle clean build\n",
-								"cd /home/ec2-user/MonoToMicro/MonoToMicroLambda\n",
-								"gradle clean build\n",
-								"AWS_DEFAULT_REGION=", {
-									"Ref": "AWS::Region"
-								}, "\n",
-								"UI_RANDOM_NAME=", {
-									"Ref": "UIBucket"
-								}, "\n",
-								"ASSETS_RANDOM_NAME=", {
-									"Ref": "AssetBucket"
-								}, "\n",
-								"aws s3 cp /home/ec2-user/MonoToMicro/MonoToMicroUI s3://$UI_RANDOM_NAME/ --recursive --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers\n",
-								"aws s3 cp /home/ec2-user/MonoToMicro/MonoToMicroLambda/build/libs s3://$ASSETS_RANDOM_NAME/ --recursive --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers\n",
+                                "sudo yum install -y aws-cfn-bootstrap\n",
                                 "/opt/aws/bin/cfn-init -v ",
 								"         --stack ", { "Ref" : "AWS::StackName" },
                                 "         --resource EC2Instance ",
-                                "         --region ", { "Ref" : "AWS::Region" }, "\n",
-                                "sudo systemctl daemon-reload\n",
-                                "sudo systemctl enable mono2micro\n",
-                                "sudo systemctl start mono2micro\n",
-                                "sudo amazon-cloudwatch-agent-ctl -a fetch-config -s -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json\n",
+                                "         --region ", { "Ref" : "AWS::Region" }, 
+                                "         --configsets default",
+                                "\n",
                                 "/opt/aws/bin/cfn-signal -e $?",
 									" --stack ", { "Ref": "AWS::StackName" },
 									" --resource EC2Instance",
-									" --region ", { "Ref" : "AWS::Region" }, "\n"
+                                    " --region ", { "Ref" : "AWS::Region" }, 
+                                "\n"
 							]
 						]
 					}
