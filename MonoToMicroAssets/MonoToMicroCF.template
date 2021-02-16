@@ -1,8 +1,5 @@
 {
 	"AWSTemplateFormatVersion": "2010-09-09",
-	"Metadata": {
-
-	},
 	"Parameters": {
 		  "LatestAmiId":{
             "Type": "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
@@ -20,7 +17,7 @@
 				"InstanceTenancy": "default",
 				"Tags": [{
 					"Key": "Name",
-					"Value": "MonoToMicro"
+					"Value":  { "Fn::Join" : [ "", [ "MonoToMicro-", { "Ref" : "AWS::StackName" }, "-vpc" ] ] }
 				}]
 			}
 		},
@@ -29,7 +26,7 @@
 			"Properties": {
 				"Tags": [{
 					"Key": "Name",
-					"Value": "MonoToMicroIGW"
+					"Value": { "Fn::Join" : [ "", [ "MonoToMicro-", { "Ref" : "AWS::StackName" }, "-igw" ] ] }
 				}]
 			}
 		},
@@ -64,7 +61,7 @@
 				"MapPublicIpOnLaunch": "true",
 				"Tags": [{
 					"Key": "Name",
-					"Value": "MonoToMicroSubnet1"
+					"Value": { "Fn::Join" : [ "", [ "MonoToMicro-", { "Ref" : "AWS::StackName" }, "-subnet1" ] ] }
 				}]
 			}
 		},
@@ -88,7 +85,7 @@
 				"MapPublicIpOnLaunch": "true",
 				"Tags": [{
 					"Key": "Name",
-					"Value": "MonoToMicroSubnet2"
+					"Value": { "Fn::Join" : [ "", [ "MonoToMicro-", { "Ref" : "AWS::StackName" }, "-subnet2" ] ] }
 				}]
 			}
 		},
@@ -100,7 +97,7 @@
 				},
 				"Tags": [{
 					"Key": "Name",
-					"Value": "MonoToMicroPublicRoutTable"
+					"Value": { "Fn::Join" : [ "", [ "MonoToMicro-", { "Ref" : "AWS::StackName" }, "-PublicRoute" ] ] }
 				}]
 			}
 		},
@@ -154,7 +151,7 @@
 				}],
 				"Tags": [{
 					"Key": "Name",
-					"Value": "MonoToMicroDBSG"
+					"Value": { "Fn::Join" : [ "", [ "MonoToMicro-", { "Ref" : "AWS::StackName" }, "-DBSG" ] ] }
 				}]
 			}
 		},
@@ -206,7 +203,7 @@
 				],
 				"Tags": [{
 					"Key": "Name",
-					"Value": "MonoToMicroEC2SG"
+					"Value": { "Fn::Join" : [ "", [ "MonoToMicro-", { "Ref" : "AWS::StackName" }, "-EC2G" ] ] }
 				}]
 			}
 		},
@@ -218,6 +215,12 @@
 				"FromPort": 3306,
 				"ToPort": 3306,
 				"DestinationSecurityGroupId": { "Ref": "DBSecurityGroup" }
+			}
+		},
+		"InstanceLogGroup": {
+			"Type": "AWS::Logs::LogGroup",
+			"Properties": {
+				"RetentionInDays": 7
 			}
 		},
 		"S3InstanceProfile": {
@@ -263,6 +266,7 @@
 		"S3Role": {
 			"Type": "AWS::IAM::Role",
 			"Properties": {
+				"RoleName" : { "Fn::Join" : [ "", [ "MonoToMicro-", { "Ref" : "AWS::StackName" }, "-Role" ] ] },
 				"AssumeRolePolicyDocument": {
 					"Version": "2012-10-17",
 					"Statement": [{
@@ -275,6 +279,10 @@
 						]
 					}]
 				},
+				"ManagedPolicyArns" : [
+					"arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
+					"arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+				],
 				"Path": "/"
 			}
 		},
@@ -283,8 +291,8 @@
 			"DeletionPolicy": "Delete",
 
 			"Properties": {
-				"DBName": "MonoToMicroDB",
-				"DBInstanceIdentifier": "MonoToMicroDB",
+				"DBName": { "Fn::Join" : [ "", [ "MonoToMicro", { "Ref" : "AWS::StackName" }, "DB" ] ] },
+				"DBInstanceIdentifier": { "Fn::Join" : [ "", [ "MonoToMicro", { "Ref" : "AWS::StackName" }, "DB" ] ] },
 				"Engine": "MySQL",
 				"DBInstanceClass": "db.t2.micro",
 				"Port": "3306",
@@ -300,7 +308,7 @@
 				"MultiAZ": "false",
 				"Tags": [{
 					"Key": "Name",
-					"Value": "MonoToMicroDB"
+					"Value": { "Fn::Join" : [ "", [ "MonoToMicro-", { "Ref" : "AWS::StackName" }, "-DB" ] ] }
 				}]
 			}
 		},
@@ -325,8 +333,39 @@
 					"Timeout": "PT30M"
 				}
 			},
+			"Metadata" : {
+				"AWS::CloudFormation::Init" : {
+					"config" : {
+						"files" : {
+							"/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json" : {
+								"content" : { "Fn::Join" : [ "", [
+									"{\n",
+									"    \"logs\": {\n",
+									"        \"logs_collected\": {\n",
+									"            \"files\": {\n",
+									"                \"collect_list\": [\n",
+									"                    {\n",
+									"                        \"file_path\": \"/home/ec2-user/MonoToMicro/MonoToMicroLegacy/build/libs/app.log\"\n",
+									{ "Fn::Join" : [ "", ["                        \"log_group_name\":", { "Ref" : "AWS::StackName" }, "-instance-group", "\n"] ] },
+									{ "Fn::Join" : [ "", ["                        \"log_stream_name\":", { "Ref" : "AWS::StackName" }, "-instance-logstream", "\n"] ] },
+									"                        \"timezone\": \"Local\"\n",
+									"                    }\n",
+									"                ]\n",
+									"            }\n",
+									"        }\n",
+									"    }\n",
+									"}"
+								]]},
+								"mode"  : "000600",
+								"owner" : "ec2-user",
+								"group" : "ec2-user"
+							}
+						}
+					}
+				}
+			},
 			"Properties": {
-				"InstanceType": "t2.micro",
+				"InstanceType": "t3.small",
 				"ImageId": {
 					"Ref": "LatestAmiId"
     		    },
@@ -348,6 +387,14 @@
 									"Fn::GetAtt": ["DBInstance", "Endpoint.Address"]
 								}, "\n",
 								"sudo yum update -y\n",
+								"sudo yum install -y aws-cfn-bootstrap\n",
+								"/opt/aws/bin/cfn-init -v ",
+								"         --stack ", { "Ref" : "AWS::StackName" },
+								"         --resource EC2Instance ",
+								"         --region ", { "Ref" : "AWS::Region" }, "\n",
+								"sudo yum install -y https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm\n",
+								"sudo yum install amazon-cloudwatch-agent -y\n",
+								"sudo amazon-cloudwatch-agent-ctl -a fetch-config -s -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json\n",
 								"sudo yum -y install mysql\n",
 								"sudo yum -y install java-1.8.0-openjdk-devel\n",
 								"sudo yum -y install unzip\n",
@@ -376,14 +423,10 @@
 								"ASSETS_RANDOM_NAME=", {
 									"Ref": "AssetBucket"
 								}, "\n",
-								"declare -i EXIT_CODE=0\n",
 								"aws s3 cp /home/ec2-user/MonoToMicro/MonoToMicroUI s3://$UI_RANDOM_NAME/ --recursive --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers\n",
-								"EXIT_CODE+=$?\n",
 								"aws s3 cp /home/ec2-user/MonoToMicro/MonoToMicroLambda/build/libs s3://$ASSETS_RANDOM_NAME/ --recursive --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers\n",
-								"EXIT_CODE+=$?\n",
-								"java -jar /home/ec2-user/MonoToMicro/MonoToMicroLegacy/build/libs/MonoToMicroLegacy-0.0.1-SNAPSHOT.jar &\n",
-								"EXIT_CODE+=$?\n",
-								"/opt/aws/bin/cfn-signal -e $EXIT_CODE",
+								"java -jar /home/ec2-user/MonoToMicro/MonoToMicroLegacy/build/libs/MonoToMicroLegacy-0.0.1-SNAPSHOT.jar &> /home/ec2-user/MonoToMicro/MonoToMicroLegacy/build/libs/app.log &\n",
+								"/opt/aws/bin/cfn-signal -e $?",
 									" --stack ", { "Ref": "AWS::StackName" },
 									" --resource EC2Instance",
 									" --region ", { "Ref" : "AWS::Region" }, "\n"
@@ -393,7 +436,7 @@
 				},
 				"Tags": [{
 					"Key": "Name",
-					"Value": "MonoToMicroEC2"
+					"Value": { "Fn::Join" : [ "", [ "MonoToMicro-", { "Ref" : "AWS::StackName" }, "-EC2" ] ] }
 				}]
 			}
 		}
