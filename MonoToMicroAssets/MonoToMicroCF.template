@@ -394,7 +394,10 @@
                                     "gradle clean build\n"
                                 ]]}
                             },
-                            "4-populate-buckets" : { "command" :
+                            "4-modify-configuration" : { "command" :
+                                "sed -i \"s/:\\/\\/.*\\\"/:\\/\\/$(curl -s http://169.254.169.254/latest/meta-data/public-hostname)\\\"/g\" /home/ec2-user/MonoToMicro/MonoToMicroUI/config.json"
+                            },
+                            "5-populate-buckets" : { "command" :
                                     { "Fn::Join" : [ "",[
                                         "AWS_DEFAULT_REGION=", {
                                             "Ref": "AWS::Region"
