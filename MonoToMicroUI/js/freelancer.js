@@ -7,9 +7,12 @@
       var target = $(this.hash);
       target = target.length ? target : $('[name=' + this.hash.slice(1) + ']');
       if (target.length) {
-        $('html, body').animate({
-          scrollTop: (target.offset().top - 71)
-        }, 1000, "easeInOutExpo");
+        anime({
+          targets: 'html, body',
+          scrollTop: target.offset().top - 72,
+          duration: 1000,
+          easing: 'easeInOutExpo'
+        });
         return false;
       }
     }
