@@ -385,9 +385,9 @@
                             "3-gradle-install-build" :  { "command" :
                                 { "Fn::Join" : [ "",[
                                     "cd /home/ec2-user/\n",
-                                    "sudo wget https://services.gradle.org/distributions/gradle-5.6.3-bin.zip\n",
-                                    "sudo unzip -d /home/ec2-user/ /home/ec2-user/gradle-5.6.3-bin.zip\n",
-                                    "export PATH=$PATH:/home/ec2-user/gradle-5.6.3/bin\n",
+                                    "sudo wget https://services.gradle.org/distributions/gradle-6.9-bin.zip\n",
+                                    "sudo unzip -d /home/ec2-user/ /home/ec2-user/gradle-6.9-bin.zip\n",
+                                    "export PATH=$PATH:/home/ec2-user/gradle-6.9/bin\n",
                                     "cd /home/ec2-user/MonoToMicro/MonoToMicroLegacy\n",
                                     "gradle clean build\n",
                                     "cd /home/ec2-user/MonoToMicro/MonoToMicroLambda\n",
@@ -473,7 +473,7 @@
                                             "export ASSETS_RANDOM_NAME=", {
                                                 "Ref": "AssetBucket"
                                             }, "\n",
-                                            "export PATH=$PATH:/home/ec2-user/gradle-5.6.3/bin\n"
+                                            "export PATH=$PATH:/home/ec2-user/gradle-6.9/bin\n"
                                         ]
                                     ]},
                                     "mode"  : "000555",
