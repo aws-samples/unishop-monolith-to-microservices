@@ -1,0 +1,388 @@
+# author: Rafael CASSOLATO - awsraf@amazon.com
+# version: 1.0
+# CLI command:
+# aws cloudformation create-stack --stack-name unicorns \
+#                                 --template-body file://MonoToMicroCFAPIG.yaml \
+#                                 --parameters ParameterKey=BaseURLfromOutput,ParameterValue=[base URL copied from CloudFormation output]
+
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  BaseURLfromOutput:
+    Type: String
+
+Resources:
+  ApiGatewayRestApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: unicorns
+      EndpointConfiguration:
+        Types:
+        - EDGE
+
+  UnicornsResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:             
+      ParentId: !GetAtt ApiGatewayRestApi.RootResourceId      
+      PathPart: unicorns
+      RestApiId: !Ref ApiGatewayRestApi  
+
+  # Enable Api Gateway CORS for Unicorns Resource
+  EnableApiGatewayCORS4UnicornsResourceMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      ResourceId: !Ref UnicornsResource
+      RestApiId: !Ref ApiGatewayRestApi
+      HttpMethod: OPTIONS
+      Integration:
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            ResponseTemplates:
+              application/json: ''
+        PassthroughBehavior: WHEN_NO_MATCH
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        Type: MOCK
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: Empty
+          ResponseParameters:
+            # Indicate the following are not required params
+            method.response.header.Access-Control-Allow-Headers: false
+            method.response.header.Access-Control-Allow-Methods: false
+            method.response.header.Access-Control-Allow-Origin: false
+
+  UnicornsGetMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: GET
+      ResourceId: !Ref UnicornsResource
+      RestApiId: !Ref ApiGatewayRestApi
+      AuthorizationType: NONE
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: Empty
+          ResponseParameters:
+            # Indicate the following are not required params
+            method.response.header.Access-Control-Allow-Headers: false
+            method.response.header.Access-Control-Allow-Methods: false
+            method.response.header.Access-Control-Allow-Origin: false          
+      Integration:
+        IntegrationHttpMethod: GET
+        Type: HTTP        
+        Uri: !Join [ "", [ !Ref BaseURLfromOutput, '/unicorns' ] ]
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseTemplates:
+              application/json: ''
+
+  BasketResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:             
+      ParentId: !Ref UnicornsResource      
+      PathPart: basket
+      RestApiId: !Ref ApiGatewayRestApi
+
+  # Enable Api Gateway CORS for Basket Resource
+  EnableApiGatewayCORS4BasketResourceMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      ResourceId: !Ref BasketResource
+      RestApiId: !Ref ApiGatewayRestApi
+      HttpMethod: OPTIONS
+      Integration:
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            ResponseTemplates:
+              application/json: ''
+        PassthroughBehavior: WHEN_NO_MATCH
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        Type: MOCK
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: Empty
+          ResponseParameters:
+            # Indicate the following are not required params
+            method.response.header.Access-Control-Allow-Headers: false
+            method.response.header.Access-Control-Allow-Methods: false
+            method.response.header.Access-Control-Allow-Origin: false
+
+  BasketPostMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: POST
+      ResourceId: !Ref BasketResource
+      RestApiId: !Ref ApiGatewayRestApi
+      AuthorizationType: NONE
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: Empty
+          ResponseParameters:
+            # Indicate the following are not required params
+            method.response.header.Access-Control-Allow-Headers: false
+            method.response.header.Access-Control-Allow-Methods: false
+            method.response.header.Access-Control-Allow-Origin: false          
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: HTTP
+        Uri: !Join [ "", [ !Ref BaseURLfromOutput, '/unicorns/basket' ] ]
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseTemplates:
+              application/json: ''
+
+  BasketDeleteMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: DELETE
+      ResourceId: !Ref BasketResource
+      RestApiId: !Ref ApiGatewayRestApi
+      AuthorizationType: NONE
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: Empty
+          ResponseParameters:
+            # Indicate the following are not required params
+            method.response.header.Access-Control-Allow-Headers: false
+            method.response.header.Access-Control-Allow-Methods: false
+            method.response.header.Access-Control-Allow-Origin: false          
+      Integration:
+        IntegrationHttpMethod: DELETE
+        Type: HTTP
+        Uri: !Join [ "", [ !Ref BaseURLfromOutput, '/unicorns/basket' ] ]
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseTemplates:
+              application/json: ''
+
+  UUIDResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:             
+      ParentId: !Ref BasketResource   
+      PathPart: "{uuid}"
+      RestApiId: !Ref ApiGatewayRestApi
+
+  # Enable Api Gateway CORS for UUID Resource
+  EnableApiGatewayCORS4UUIDResourceMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      ResourceId: !Ref UUIDResource
+      RestApiId: !Ref ApiGatewayRestApi
+      HttpMethod: OPTIONS
+      Integration:
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            ResponseTemplates:
+              application/json: ''
+        PassthroughBehavior: WHEN_NO_MATCH
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        Type: MOCK
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: Empty
+          ResponseParameters:
+            # Indicate the following are not required params
+            method.response.header.Access-Control-Allow-Headers: false
+            method.response.header.Access-Control-Allow-Methods: false
+            method.response.header.Access-Control-Allow-Origin: false
+
+  UUIDGetMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: GET
+      ResourceId: !Ref UUIDResource
+      RestApiId: !Ref ApiGatewayRestApi
+      AuthorizationType: NONE
+      RequestParameters:
+          method.request.path.uuid : true
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: Empty
+          ResponseParameters:
+            # Indicate the following are not required params
+            method.response.header.Access-Control-Allow-Headers: false
+            method.response.header.Access-Control-Allow-Methods: false
+            method.response.header.Access-Control-Allow-Origin: false          
+      Integration:
+        IntegrationHttpMethod: GET
+        Type: HTTP
+        Uri: !Join [ "", [ !Ref BaseURLfromOutput, '/unicorns/basket/{uuid}' ] ]
+        RequestParameters:
+            integration.request.path.uuid: 'method.request.path.uuid'
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseTemplates:
+              application/json: ''
+
+  UserResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:             
+      ParentId: !GetAtt ApiGatewayRestApi.RootResourceId
+      PathPart: user
+      RestApiId: !Ref ApiGatewayRestApi
+
+  # Enable Api Gateway CORS for User Resource
+  EnableApiGatewayCORS4UserResourceMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      ResourceId: !Ref UserResource
+      RestApiId: !Ref ApiGatewayRestApi
+      HttpMethod: OPTIONS
+      Integration:
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            ResponseTemplates:
+              application/json: ''
+        PassthroughBehavior: WHEN_NO_MATCH
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        Type: MOCK
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: Empty
+          ResponseParameters:
+            # Indicate the following are not required params
+            method.response.header.Access-Control-Allow-Headers: false
+            method.response.header.Access-Control-Allow-Methods: false
+            method.response.header.Access-Control-Allow-Origin: false
+
+  CreateUserMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: POST
+      ResourceId: !Ref UserResource
+      RestApiId: !Ref ApiGatewayRestApi
+      AuthorizationType: NONE
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: Empty
+          ResponseParameters:
+            # Indicate the following are not required params
+            method.response.header.Access-Control-Allow-Headers: false
+            method.response.header.Access-Control-Allow-Methods: false
+            method.response.header.Access-Control-Allow-Origin: false
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: HTTP
+        Uri: !Join [ "", [ !Ref BaseURLfromOutput, '/user' ] ]        
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseTemplates:
+              application/json: ''
+
+  LoginResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:             
+      ParentId: !Ref UserResource
+      PathPart: login
+      RestApiId: !Ref ApiGatewayRestApi
+
+  # Enable Api Gateway CORS for Login Resource
+  EnableApiGatewayCORS4LoginResourceMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      ResourceId: !Ref LoginResource
+      RestApiId: !Ref ApiGatewayRestApi
+      HttpMethod: OPTIONS
+      Integration:
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            ResponseTemplates:
+              application/json: ''
+        PassthroughBehavior: WHEN_NO_MATCH
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        Type: MOCK
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: Empty
+          ResponseParameters:
+            # Indicate the following are not required params
+            method.response.header.Access-Control-Allow-Headers: false
+            method.response.header.Access-Control-Allow-Methods: false
+            method.response.header.Access-Control-Allow-Origin: false
+
+  UserLoginMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      HttpMethod: POST
+      ResourceId: !Ref LoginResource
+      RestApiId: !Ref ApiGatewayRestApi
+      AuthorizationType: NONE
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: Empty
+          ResponseParameters:
+            # Indicate the following are not required params
+            method.response.header.Access-Control-Allow-Headers: false
+            method.response.header.Access-Control-Allow-Methods: false
+            method.response.header.Access-Control-Allow-Origin: false          
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: HTTP
+        Uri: !Join [ "", [ !Ref BaseURLfromOutput, '/user/login' ] ]
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseTemplates:
+              application/json: ''  
+
+  ApiDeployment:
+    Type: AWS::ApiGateway::Deployment
+    Properties: 
+      RestApiId: !Ref ApiGatewayRestApi
+    DependsOn:
+    - UnicornsGetMethod
+    - BasketPostMethod
+    - BasketDeleteMethod
+    - UUIDGetMethod
+    - CreateUserMethod
+    - UserLoginMethod
+
+  ApiStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      DeploymentId: !Ref ApiDeployment
+      RestApiId: !Ref ApiGatewayRestApi
+      StageName: dev
+      Description: development
+
+Outputs:
+  InvokeURL:
+    Value: !Sub "https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/${ApiStage}"
