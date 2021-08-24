@@ -596,6 +596,15 @@
         "UIBucket": {
             "Value": { "Ref": "UIBucket" },
             "Description": "S3 Bucket containing the UniShop website"
+        },
+        "WebsiteURL": {
+            "Value": {
+                "Fn::GetAtt": [
+                    "UIBucket",
+                    "WebsiteURL"
+                ]
+            },
+            "Description": "URL for UniShop website hosted on S3"
         }
     }
 }
