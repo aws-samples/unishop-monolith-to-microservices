@@ -1,14 +1,8 @@
-# author: Rafael CASSOLATO - awsraf@amazon.com
-# version: 1.0
-# CLI command:
-# aws cloudformation create-stack --stack-name unicorns \
-#                                 --template-body file://MonoToMicroCFAPIG.yaml \
-#                                 --parameters ParameterKey=BaseURLfromOutput,ParameterValue=[base URL copied from CloudFormation output]
-
 AWSTemplateFormatVersion: 2010-09-09
 Parameters:
-  BaseURLfromOutput:
-    Type: String
+  UniShopBackendDnsName:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: UniShopPublicDnsName
 
 Resources:
   ApiGatewayRestApi:
@@ -17,14 +11,14 @@ Resources:
       Name: unicorns
       EndpointConfiguration:
         Types:
-        - EDGE
+          - EDGE
 
   UnicornsResource:
     Type: AWS::ApiGateway::Resource
-    Properties:             
-      ParentId: !GetAtt ApiGatewayRestApi.RootResourceId      
+    Properties:
+      ParentId: !GetAtt ApiGatewayRestApi.RootResourceId
       PathPart: unicorns
-      RestApiId: !Ref ApiGatewayRestApi  
+      RestApiId: !Ref ApiGatewayRestApi
 
   # Enable Api Gateway CORS for Unicorns Resource
   EnableApiGatewayCORS4UnicornsResourceMethod:
@@ -72,11 +66,11 @@ Resources:
             # Indicate the following are not required params
             method.response.header.Access-Control-Allow-Headers: false
             method.response.header.Access-Control-Allow-Methods: false
-            method.response.header.Access-Control-Allow-Origin: false          
+            method.response.header.Access-Control-Allow-Origin: false
       Integration:
         IntegrationHttpMethod: GET
-        Type: HTTP        
-        Uri: !Join [ "", [ !Ref BaseURLfromOutput, '/unicorns' ] ]
+        Type: HTTP
+        Uri: !Join [ "", [ !Ref UniShopBackendDnsName, '/unicorns' ] ]
         IntegrationResponses:
           - StatusCode: 200
             ResponseParameters:
@@ -89,8 +83,8 @@ Resources:
 
   BasketResource:
     Type: AWS::ApiGateway::Resource
-    Properties:             
-      ParentId: !Ref UnicornsResource      
+    Properties:
+      ParentId: !Ref UnicornsResource
       PathPart: basket
       RestApiId: !Ref ApiGatewayRestApi
 
@@ -140,11 +134,11 @@ Resources:
             # Indicate the following are not required params
             method.response.header.Access-Control-Allow-Headers: false
             method.response.header.Access-Control-Allow-Methods: false
-            method.response.header.Access-Control-Allow-Origin: false          
+            method.response.header.Access-Control-Allow-Origin: false
       Integration:
         IntegrationHttpMethod: POST
         Type: HTTP
-        Uri: !Join [ "", [ !Ref BaseURLfromOutput, '/unicorns/basket' ] ]
+        Uri: !Join [ "", [ !Ref UniShopBackendDnsName, '/unicorns/basket' ] ]
         IntegrationResponses:
           - StatusCode: 200
             ResponseParameters:
@@ -170,11 +164,11 @@ Resources:
             # Indicate the following are not required params
             method.response.header.Access-Control-Allow-Headers: false
             method.response.header.Access-Control-Allow-Methods: false
-            method.response.header.Access-Control-Allow-Origin: false          
+            method.response.header.Access-Control-Allow-Origin: false
       Integration:
         IntegrationHttpMethod: DELETE
         Type: HTTP
-        Uri: !Join [ "", [ !Ref BaseURLfromOutput, '/unicorns/basket' ] ]
+        Uri: !Join [ "", [ !Ref UniShopBackendDnsName, '/unicorns/basket' ] ]
         IntegrationResponses:
           - StatusCode: 200
             ResponseParameters:
@@ -187,8 +181,8 @@ Resources:
 
   UUIDResource:
     Type: AWS::ApiGateway::Resource
-    Properties:             
-      ParentId: !Ref BasketResource   
+    Properties:
+      ParentId: !Ref BasketResource
       PathPart: "{uuid}"
       RestApiId: !Ref ApiGatewayRestApi
 
@@ -231,7 +225,7 @@ Resources:
       RestApiId: !Ref ApiGatewayRestApi
       AuthorizationType: NONE
       RequestParameters:
-          method.request.path.uuid : true
+        method.request.path.uuid : true
       MethodResponses:
         - StatusCode: 200
           ResponseModels:
@@ -240,13 +234,13 @@ Resources:
             # Indicate the following are not required params
             method.response.header.Access-Control-Allow-Headers: false
             method.response.header.Access-Control-Allow-Methods: false
-            method.response.header.Access-Control-Allow-Origin: false          
+            method.response.header.Access-Control-Allow-Origin: false
       Integration:
         IntegrationHttpMethod: GET
         Type: HTTP
-        Uri: !Join [ "", [ !Ref BaseURLfromOutput, '/unicorns/basket/{uuid}' ] ]
+        Uri: !Join [ "", [ !Ref UniShopBackendDnsName, '/unicorns/basket/{uuid}' ] ]
         RequestParameters:
-            integration.request.path.uuid: 'method.request.path.uuid'
+          integration.request.path.uuid: 'method.request.path.uuid'
         IntegrationResponses:
           - StatusCode: 200
             ResponseParameters:
@@ -259,7 +253,7 @@ Resources:
 
   UserResource:
     Type: AWS::ApiGateway::Resource
-    Properties:             
+    Properties:
       ParentId: !GetAtt ApiGatewayRestApi.RootResourceId
       PathPart: user
       RestApiId: !Ref ApiGatewayRestApi
@@ -314,7 +308,7 @@ Resources:
       Integration:
         IntegrationHttpMethod: POST
         Type: HTTP
-        Uri: !Join [ "", [ !Ref BaseURLfromOutput, '/user' ] ]        
+        Uri: !Join [ "", [ !Ref UniShopBackendDnsName, '/user' ] ]
         IntegrationResponses:
           - StatusCode: 200
             ResponseParameters:
@@ -327,7 +321,7 @@ Resources:
 
   LoginResource:
     Type: AWS::ApiGateway::Resource
-    Properties:             
+    Properties:
       ParentId: !Ref UserResource
       PathPart: login
       RestApiId: !Ref ApiGatewayRestApi
@@ -378,11 +372,11 @@ Resources:
             # Indicate the following are not required params
             method.response.header.Access-Control-Allow-Headers: false
             method.response.header.Access-Control-Allow-Methods: false
-            method.response.header.Access-Control-Allow-Origin: false          
+            method.response.header.Access-Control-Allow-Origin: false
       Integration:
         IntegrationHttpMethod: POST
         Type: HTTP
-        Uri: !Join [ "", [ !Ref BaseURLfromOutput, '/user/login' ] ]
+        Uri: !Join [ "", [ !Ref UniShopBackendDnsName, '/user/login' ] ]
         IntegrationResponses:
           - StatusCode: 200
             ResponseParameters:
@@ -391,19 +385,19 @@ Resources:
               # Ideally, we would put our client app TLD here for extra security
               method.response.header.Access-Control-Allow-Origin: "'*'"
             ResponseTemplates:
-              application/json: ''  
+              application/json: ''
 
   ApiDeployment:
     Type: AWS::ApiGateway::Deployment
-    Properties: 
+    Properties:
       RestApiId: !Ref ApiGatewayRestApi
     DependsOn:
-    - UnicornsGetMethod
-    - BasketPostMethod
-    - BasketDeleteMethod
-    - UUIDGetMethod
-    - CreateUserMethod
-    - UserLoginMethod
+      - UnicornsGetMethod
+      - BasketPostMethod
+      - BasketDeleteMethod
+      - UUIDGetMethod
+      - CreateUserMethod
+      - UserLoginMethod
 
   ApiStage:
     Type: AWS::ApiGateway::Stage
