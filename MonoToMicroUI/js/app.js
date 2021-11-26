@@ -13,17 +13,18 @@ var myApp = angular.module('unicorn_app', ['ngRoute', 'ngResource']).controller(
     //     }
     // })
 
-    $.getJSON("config.json", function(json) {
-        console.log(json); // this will show the info it in firebug console
-        $scope.$apply(function() {
-            $scope.host = json.host;
-            $scope.init();
+    $scope.loadConfig = function(callback) {
+        $.getJSON("config.json", function(json) {
+            console.log(json); // this will show the info it in firebug console
+            $scope.$apply(function() {
+                $scope.host = json.host;
+                if (callback !== undefined) {
+                    callback();
+                }
+            });
         });
-    });
-
-
-
-    $scope.init = function() {
+    }
+    $scope.init = function(on_success, on_error) {
         console.log($scope.host);
         $.ajax({
             type: "GET",
@@ -47,7 +48,9 @@ var myApp = angular.module('unicorn_app', ['ngRoute', 'ngResource']).controller(
                 // });
 
                 $scope.$apply();
-
+                if (success !== undefined) {
+                    on_success();
+                }
 
 
             },
@@ -56,6 +59,9 @@ var myApp = angular.module('unicorn_app', ['ngRoute', 'ngResource']).controller(
                 $scope.$apply(function() {
                     // $scope.products = [{ "uuid": "73e8f9b1-b862-11e9-844a-0e8eba713748", "name": "UnicronFlaot", "description": "Big Unicorn Float! Giant Glitter Unicorn Pool Floaty", "price": 100.0, "image": "https://cdn.shopify.com/s/files/1/0028/1319/8396/products/big-unicorn-store-giant-unicorn-float-green-big-unicorn-float-giant-glitter-unicorn-pool-floaty-cuteness-overload-unicorn-gifts-7006202658876_540x.jpg?v=1546865023" }, { "uuid": "73ebc6a7-b862-11e9-844a-0e8eba713748", "name": "UnicronHipHop", "description": "Rainbow Hip Hop Unicorn With Sunglasses Kids Tshirt", "price": 100.0, "image": "https://cdn.shopify.com/s/files/1/0028/1319/8396/products/big-unicorn-store-tshirt-sky-blue-4t-rainbow-unicorn-with-sunglasses-kids-tshirt-cuteness-overload-unicorn-gifts-2537594781756_540x.jpg?v=1547958744" }, { "uuid": "73ef8ef5-b862-11e9-844a-0e8eba713748", "name": "UnicronPartyDress", "description": "Girls Unicorn Party Dress - Tutu Pastel Rainbow Princess Power!", "price": 100.0, "image": "https://cdn.shopify.com/s/files/1/0028/1319/8396/products/big-unicorn-store-kids-only-dress-12m-girls-unicorn-party-dress-tutu-pastel-rainbow-princess-power-cuteness-overload-unicorn-gifts-7001949732924_540x.jpg?v=1547969033" }, { "uuid": "73f2b657-b862-11e9-844a-0e8eba713748", "name": "UnicronGlitter", "description": "Unicorn Glitter Backpack - Shop for Unique Unicorn Gifts for Girls!", "price": 100.0, "image": "https://cdn.shopify.com/s/files/1/0028/1319/8396/products/big-unicorn-store-unicorn-glitter-silver-unicorn-glitter-backpack-unicorn-gifts-for-girls-cuteness-overload-unicorn-gifts-7006189715516_540x.jpg?v=1555042785" }, { "uuid": "73f5a95b-b862-11e9-844a-0e8eba713748", "name": "UnicronBeddings", "description": "Rainbow Unicorn Bedding Set - The Perfect Kids or Adults Unicorn Duvet Set", "price": 100.0, "image": "https://cdn.shopify.com/s/files/1/0028/1319/8396/products/big-unicorn-store-bedding-unicorn-us-full-rainbow-unicorn-bedding-set-1-duvet-and-2-standard-pillow-cases-cuteness-overload-unicorn-gifts-6982763249724_540x.jpg?v=1546852365" }, { "uuid": "73f851ff-b862-11e9-844a-0e8eba713748", "name": "UnicronPink", "description": "Pretty Pink Baby Unicorn Summer Party Dress", "price": 100.0, "image": "https://cdn.shopify.com/s/files/1/0028/1319/8396/products/big-unicorn-store-12m-pretty-pink-baby-unicorn-summer-party-dress-cuteness-overload-unicorn-gifts-2975297896508_540x.jpg?v=1546863986" }, { "uuid": "73fb46a0-b862-11e9-844a-0e8eba713748", "name": "UnicronBackpack", "description": "Top Rated Classy Unicorn Backpack - Kawaii School Bag", "price": 100.0, "image": "https://cdn.shopify.com/s/files/1/0028/1319/8396/products/big-unicorn-store-style-1-top-rated-classy-unicorn-backpack-kawaii-school-bag-cuteness-overload-unicorn-gifts-2885280858172_540x.jpg?v=1546866520" }, { "uuid": "73fe09c0-b862-11e9-844a-0e8eba713748", "name": "UnicronBlanket", "description": "Superfun Bestselling Unicorn Hooded Blanket", "price": 100.0, "image": "https://cdn.shopify.com/s/files/1/0028/1319/8396/products/big-unicorn-store-bedding-9-127x152cm-superfun-bestselling-unicorn-hooded-blanket-cuteness-overload-unicorn-gifts-6957875822652_540x.jpg?v=1546852020" }, { "uuid": "7400a372-b862-11e9-844a-0e8eba713748", "name": "UnicronCool", "description": "Cool Dabbing Unicorn Mens Hip-hop Shirts", "price": 100.0, "image": "https://cdn.shopify.com/s/files/1/0028/1319/8396/products/big-unicorn-store-tshirts-white-s-cool-dabbing-unicorn-mens-hip-hop-shirts-cuteness-overload-unicorn-gifts-2829379764284_540x.jpg?v=1546866958" }, { "uuid": "74036c31-b862-11e9-844a-0e8eba713748", "name": "UnicronFluffy", "description": "Stylish Fluffy Unicorn Slippers", "price": 100.0, "image": "https://cdn.shopify.com/s/files/1/0028/1319/8396/products/big-unicorn-store-slippers-gray-7-stylish-fluffy-unicorn-slippers-cuteness-overload-unicorn-gifts-2822282215484_540x.jpg?v=1546844697" }];
                 });
+                if (on_error !== undefined) {
+                    on_error()
+                }
             }
         });
     };
@@ -63,25 +69,28 @@ var myApp = angular.module('unicorn_app', ['ngRoute', 'ngResource']).controller(
 
     var db = new PouchDB('popedit7', { auto_compaction: true });
 
-    db.get("user").then(function(doc) {
+    $scope.loadUser = function () {
 
-        $scope.$apply(function() {
+        db.get("user").then(function(doc) {
 
-            console.log("Setting User", doc);
+            $scope.$apply(function() {
 
-            $scope.user = doc.uuid;
-            $scope.user_email = doc.email;
-            $scope.getCart();
-            $.notify("Logged in!", { className: "success", globalPosition: 'top center' });
+                console.log("Setting User", doc);
+
+                $scope.user = doc.uuid;
+                $scope.user_email = doc.email;
+                $scope.getCart();
+                $.notify("Logged in!", { className: "success", globalPosition: 'top center' });
 
 
-        });
+            });
 
-        // $scope.getCart(doc.uuid);
+            // $scope.getCart(doc.uuid);
 
-    }).catch(function(err) {
-        console.log("User not logged in ");
-    });;
+        }).catch(function(err) {
+            console.log("User not logged in ");
+        });;
+    };
 
     // bootbox.alert($scope.login_email);
 
@@ -278,7 +287,7 @@ var myApp = angular.module('unicorn_app', ['ngRoute', 'ngResource']).controller(
                 },
                 error: function(err) {
                     console.log(err, "Error: Add cart");
-                    if (err.statusText == 'parsererror') {
+                    if (err.status == 200) {
                         // console.log(response, "Added to cart ...", cuuid); // server response
                         $('.modal').modal('hide');
                         $.notify("Added to cart!", { className: "success", globalPosition: 'top center' });
@@ -305,7 +314,12 @@ var myApp = angular.module('unicorn_app', ['ngRoute', 'ngResource']).controller(
 
 
     $scope.getCart = function() {
-
+        console.log("Getting cart...");
+        if ($scope.host === undefined) {
+            console.log("host undefined - loading config");
+            loadConfig($scope.getCart);
+            return;
+        }
         $.ajax({
             type: "GET",
             url: $scope.host + "/unicorns/basket/" + $scope.user,
@@ -367,9 +381,9 @@ var myApp = angular.module('unicorn_app', ['ngRoute', 'ngResource']).controller(
                 // resolve("success");
             },
             error: function(err) {
-                console.log(err, "Error: Add cart");
+                console.log(err, "Error: Delete cart");
 
-                if (err.statusText == 'parsererror') {
+                if (err.status == 200) {
                     $.notify("Removed from cart!", { className: "success", globalPosition: 'top center' });
                     $scope.getCart();
 
@@ -395,5 +409,9 @@ var myApp = angular.module('unicorn_app', ['ngRoute', 'ngResource']).controller(
         });
 
     };
+
+    $scope.loadConfig(() => {
+        $scope.init($scope.loadUser);
+    });
 
 });
