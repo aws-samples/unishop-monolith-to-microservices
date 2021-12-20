@@ -26,10 +26,4 @@
 		<nature>org.eclipse.jdt.core.javanature</nature>
 		<nature>org.eclipse.buildship.core.gradleprojectnature</nature>
 	</natures>
-	<variableList>
-		<variable>
-			<name>LOG4J</name>
-			<value>file:/Users/nirozeri/Documents/Personal/styloc/styloc-api/src/main/resources/log4j.properties</value>
-		</variable>
-	</variableList>
 </projectDescription>
