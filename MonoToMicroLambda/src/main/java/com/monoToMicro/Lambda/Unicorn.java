@@ -1,8 +1,6 @@
 /**
  * Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-
-
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy of this
  * software and associated documentation files (the "Software"), to deal in the Software
  * without restriction, including without limitation the rights to use, copy, modify,
@@ -19,138 +17,67 @@
 
 package com.monoToMicro.Lambda;
 
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBAttribute;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBHashKey;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTable;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttribute;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
+import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 
-/**
- * 
- * @author nirozeri
- * 
- */
-@DynamoDBTable(tableName="unishop")
+@DynamoDbBean
 public class Unicorn {
-	
 	private String uuid = null;	
 	private String name = null;    
 	private String description = null;    
 	private Double price = null;
 	private String image = null;
-	
-	private String userUuid = null;
-	
-	/**
-	 * 
-	 */
+
 	public Unicorn(){
 	}
 	
-	/**
-	 * 
-	 * @param uuid
-	 */  
 	public Unicorn(String uuid){
 		this.uuid = uuid;
 	}
 
-	/**
-	 * 
-	 * @return
-	 */
-	@DynamoDBHashKey(attributeName="uuid")
+	@DynamoDbPartitionKey
 	public String getUuid() {
 		return uuid;
 	}
 
-	/**
-	 * 
-	 * @param uuid
-	 */
 	public void setUuid(String uuid) {
 		this.uuid = uuid;
 	}
 	
-	/**
-	 * 
-	 * @return
-	 */
-	@DynamoDBAttribute(attributeName="name")
+	@DynamoDbAttribute(value = "name")
 	public String getName() {
 		return name;
 	}
 	
-	/**
-	 * 
-	 * @param title
-	 */
 	public void setName(String name) {
 		this.name = name;
 	}
 
-	/**
-	 * 
-	 * @return
-	 */
-	@DynamoDBAttribute(attributeName="description")
+	@DynamoDbAttribute(value = "description")
 	public String getDescription() {
 		return description;
 	}
 
-	/**
-	 * 
-	 * @param description
-	 */
 	public void setDescription(String description) {
 		this.description = description;
 	}
 
-	/**
-	 * 
-	 * @return
-	 */
-	@DynamoDBAttribute(attributeName="price")
+	@DynamoDbAttribute(value = "price")
 	public Double getPrice() {
 		return price;
 	}
 
-	/**
-	 * 
-	 * @param price
-	 */
 	public void setPrice(Double price) {
 		this.price = price;
 	}
 
-	/**
-	 * 
-	 * @return
-	 */
-	@DynamoDBAttribute(attributeName="image")
+	@DynamoDbAttribute(value = "image")
 	public String getImage() {
 		return image;
 	}
 
-	/**
-	 * 
-	 * @param image
-	 */
 	public void setImage(String image) {
 		this.image = image;
-	}
-
-	/**
-	 * 
-	 * @return
-	 */
-	public String getUserUuid() {
-		return userUuid;
-	}
-
-	/**
-	 * 
-	 * @param userUuid
-	 */
-	public void setUserUuid(String userUuid) {
-		this.userUuid = userUuid;
 	}
 }

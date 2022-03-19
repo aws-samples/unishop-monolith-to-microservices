@@ -18,33 +18,40 @@
 
 package com.monoToMicro.Lambda;
 
-import com.amazonaws.SdkClientException;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
-import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBMapper;
-import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDBTableMapper;
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
+import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
+import software.amazon.awssdk.enhanced.dynamodb.Key;
+import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.http.crt.AwsCrtAsyncHttpClient;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
+import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
+import software.amazon.awssdk.utils.StringUtils;
 
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
-/**
- *
- * @author niroz
- *
- */
 public class UnicornBasketImpl implements RequestHandler<UnicornBasket, String> {
-  private static final AmazonDynamoDB client = AmazonDynamoDBClientBuilder.standard()
-    .withRegion(System.getenv("AWS_REGION"))
+  private static final String UNICORN_TABLE_NAME = "unishop";
+  private static final DynamoDbAsyncClient ddb = DynamoDbAsyncClient.builder()
+    .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
+    .httpClientBuilder(AwsCrtAsyncHttpClient.builder().maxConcurrency(50))
+    .region(Region.of(System.getenv("AWS_REGION")))
     .build();
-  private static final DynamoDBTableMapper<UnicornBasket, Object, Object> mapper =
-    new DynamoDBMapper(client).newTableMapper(UnicornBasket.class);
+  private static final DynamoDbEnhancedAsyncClient client = DynamoDbEnhancedAsyncClient.builder()
+    .dynamoDbClient(ddb)
+    .build();
+  private static final DynamoDbAsyncTable<UnicornBasket> unicornBasketTable = client.table(
+    UNICORN_TABLE_NAME, TableSchema.fromBean(UnicornBasket.class));
 
   static {
     try {
-      mapper.describeTable();
-    } catch (SdkClientException e) {
-      // "Error while creating DynamoDB connection during init phase";
+      unicornBasketTable.describeTable().get();
+    } catch (DynamoDbException | ExecutionException | InterruptedException e) {
+      System.out.println(e.getMessage());
     }
   }
 
@@ -53,14 +60,16 @@ public class UnicornBasketImpl implements RequestHandler<UnicornBasket, String> 
     return "Unicorn Lives Matter";
   }
 
-  public String addUnicornToBasket(UnicornBasket unicornBasket, Context context) {
+  public String addUnicornToBasket(UnicornBasket unicornBasket, Context context)
+    throws ExecutionException, InterruptedException {
     //Get current basket
-    UnicornBasket currentBasket = mapper.load(unicornBasket.getUuid());
+    UnicornBasket currentBasket = unicornBasketTable.getItem(r ->
+      r.key(Key.builder().partitionValue(unicornBasket.getUuid()).build())).get();
 
     //if there is no current basket then use the incoming basket as the new basket
     if (currentBasket == null) {
       if (unicornBasket.getUuid() != null && unicornBasket.getUnicorns() != null) {
-        mapper.save(unicornBasket);
+        unicornBasketTable.putItem(unicornBasket);
         return "Added Unicorn to basket";
       }
       return "No basket exist and none was created";
@@ -72,7 +81,6 @@ public class UnicornBasketImpl implements RequestHandler<UnicornBasket, String> 
 
     //Assuming only one will be added but checking for null or empty values
     if (unicornsToAdd != null && !unicornsToAdd.isEmpty()) {
-
       Unicorn unicornToAdd = unicornsToAdd.get(0);
       String unicornToAddUuid = unicornToAdd.getUuid();
 
@@ -86,15 +94,17 @@ public class UnicornBasketImpl implements RequestHandler<UnicornBasket, String> 
       //Unicorn was not found, need to add and save
       currentUnicorns.add(unicornToAdd);
       currentBasket.setUnicorns(currentUnicorns);
-      mapper.save(currentBasket);
+      unicornBasketTable.putItem(currentBasket);
       return "Added Unicorn to basket";
     }
     return "Are you sure you added a Unicorn?";
   }
 
-  public String removeUnicornFromBasket(UnicornBasket unicornBasket, Context context) {
+  public String removeUnicornFromBasket(UnicornBasket unicornBasket, Context context)
+    throws ExecutionException, InterruptedException {
     //Get current basket
-    UnicornBasket currentBasket = mapper.load(unicornBasket.getUuid());
+    UnicornBasket currentBasket = unicornBasketTable.getItem(r ->
+      r.key(Key.builder().partitionValue(unicornBasket.getUuid()).build())).get();
 
     //if no basket exist then return an error
     if (currentBasket == null) {
@@ -107,23 +117,20 @@ public class UnicornBasketImpl implements RequestHandler<UnicornBasket, String> 
 
     //Assuming only one will be added but checking for null or empty values
     if (unicornsToRemove != null && !unicornsToRemove.isEmpty()) {
-
       Unicorn unicornToRemove = unicornsToRemove.get(0);
-
       String unicornToRemoveUuid = unicornToRemove.getUuid();
 
       for (Unicorn currentUnicorn : currentUnicorns) {
-
         if (currentUnicorn.getUuid().equals(unicornToRemoveUuid)) {
           currentUnicorns.remove(currentUnicorn);
           if (currentUnicorns.isEmpty()) {
-            //no more unicrons in basket, will delete the basket
-            mapper.delete(currentBasket);
+            //no more unicorns in basket, will delete the basket
+            unicornBasketTable.deleteItem(currentBasket);
             return "Unicorn was removed and basket was deleted!";
           } else {
             //keeping basket alive as more unicrons are in it
             currentBasket.setUnicorns(currentUnicorns);
-            mapper.save(currentBasket);
+            unicornBasketTable.putItem(currentBasket);
             return "Unicorn was removed! Other unicorns are still in basket";
           }
         }
@@ -131,19 +138,20 @@ public class UnicornBasketImpl implements RequestHandler<UnicornBasket, String> 
 
       if (currentBasket.getUnicorns() != null && currentBasket.getUnicorns().isEmpty()) {
         //no unicorn to remove, will try to remove the basket nonetheless
-        mapper.delete(currentBasket);
+        unicornBasketTable.deleteItem(currentBasket);
       }
       return "Didn't find a unicorn to remove";
     }
     return "Are you sure you asked to remove a Unicron?";
   }
 
-  public UnicornBasket getUnicornsBasket(UnicornBasket unicornBasket, Context context) {
-    if (unicornBasket.getUuid() != null && !unicornBasket.getUuid().isEmpty()) {
-      return mapper.load(unicornBasket.getUuid());
+  public UnicornBasket getUnicornsBasket(UnicornBasket unicornBasket, Context context)
+    throws ExecutionException, InterruptedException {
+    if (!StringUtils.isEmpty(unicornBasket.getUuid())) {
+      return unicornBasketTable.getItem(r ->
+        r.key(Key.builder().partitionValue(unicornBasket.getUuid()).build())).get();
     }
+
     return null;
   }
 }
-
-
