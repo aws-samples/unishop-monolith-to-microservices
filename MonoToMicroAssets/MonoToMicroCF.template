@@ -391,7 +391,7 @@
                                     "cd /home/ec2-user/MonoToMicro/MonoToMicroLegacy\n",
                                     "gradle clean build\n",
                                     "cd /home/ec2-user/MonoToMicro/MonoToMicroLambda\n",
-                                    "gradle clean build\n"
+                                    "./gradlew clean shadowJar\n"
                                 ]]}
                             },
                             "4-modify-configuration" : { "command" :

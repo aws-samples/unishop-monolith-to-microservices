@@ -34,6 +34,7 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
+                  - dynamodb:DescribeTable
                   - dynamodb:GetItem
                   - dynamodb:DeleteItem
                   - dynamodb:PutItem
