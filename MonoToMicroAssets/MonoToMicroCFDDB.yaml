@@ -18,6 +18,9 @@ Resources:
   LambdaRole:
     Type: AWS::IAM::Role
     Properties:
+      RoleName: MonoToMicroLambdaRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -29,7 +32,7 @@ Resources:
               - sts:AssumeRole
       Path: /service-role/
       Policies:
-        - PolicyName: s3get
+        - PolicyName: LambdaDynamoDBAccess
           PolicyDocument:
             Version: 2012-10-17
             Statement:
