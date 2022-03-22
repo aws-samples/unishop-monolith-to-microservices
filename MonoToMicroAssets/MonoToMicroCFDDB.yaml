@@ -1,4 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
+Description: Amazon DynamoDB stack for the Application Modernization Workshop/ Immersion Day
 Resources:
   DynamoDBTable:
     Type: AWS::DynamoDB::Table

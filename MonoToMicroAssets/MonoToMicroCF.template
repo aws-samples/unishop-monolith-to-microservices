@@ -1,6 +1,6 @@
 {
     "AWSTemplateFormatVersion": "2010-09-09",
-    "Description" : "This deployment includes SSM, CloudWatch, and allows instance reboot",
+    "Description" : "Monolith stack for the Application Modernization Workshop/ Immersion Day",
     "Parameters": {
           "LatestAmiId":{
             "Type": "AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>",
