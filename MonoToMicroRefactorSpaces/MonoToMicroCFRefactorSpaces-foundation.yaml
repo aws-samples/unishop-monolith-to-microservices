@@ -68,7 +68,7 @@ Resources:
     Type: AWS::SSM::Parameter
     Properties:
       Name: UniShopApiGatewayId
-      Value: !GetAtt UniShopRefactorSpacesApplication.ApiGatewayIdentifier
+      Value: !GetAtt UniShopRefactorSpacesApplication.ApiGatewayId
       Type: String
       Description: UniShop API Gateway Id
 
