@@ -1,0 +1,114 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Shopping Cart Services Stack for the Application Modernization Workshop/Immersion Day
+
+Parameters:
+  RefactorSpacesEnvironmentId:
+      Type: String
+      Description: UniShop Environment ID. Leave empty to use the value from infrastructure CFN deployment.
+      Default: ''
+  RefactorSpacesApplicationId:
+      Type: String
+      Description: UniShop Application ID. Leave empty to use the value from infrastructure CFN deployment.
+      Default: ''
+  RefactorSpacesApiGatewayId:
+      Type: String
+      Description: UniShop Application API Gateway ID. Leave empty to use the value from infrastructure CFN deployment.
+      Default: ''
+
+Conditions:
+  UseSSMEnvironmentIdValue:  !Equals [!Ref "RefactorSpacesEnvironmentId", ""]
+  UseSSMApplicationIdValue:  !Equals [!Ref "RefactorSpacesApplicationId", ""]
+  UseSSMApiGatewayIdValue:  !Equals [!Ref "RefactorSpacesApiGatewayId", ""]
+
+Resources:
+  AddToCartService:
+    Type: AWS::RefactorSpaces::Service
+    DeletionPolicy: Delete
+    Properties:
+      Name: AddToCartService
+      Description: Add Unicorn to Cart
+      EnvironmentIdentifier: !If [ UseSSMEnvironmentIdValue, '{{resolve:ssm:UniShopEnvironmentId:1}}', !Ref  RefactorSpacesEnvironmentId]
+      ApplicationIdentifier: !If [ UseSSMApplicationIdValue, '{{resolve:ssm:UniShopApplicationId:1}}', !Ref  RefactorSpacesApplicationId]
+      EndpointType: LAMBDA
+      LambdaEndpoint:
+        Arn: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:AddUnicornToBasket'
+  AddToCartServiceRoute:
+    Type: AWS::RefactorSpaces::Route
+    Properties:
+      RouteType: URI_PATH
+      EnvironmentIdentifier: !If [ UseSSMEnvironmentIdValue, '{{resolve:ssm:UniShopEnvironmentId:1}}', !Ref  RefactorSpacesEnvironmentId]
+      ApplicationIdentifier: !If [ UseSSMApplicationIdValue, '{{resolve:ssm:UniShopApplicationId:1}}', !Ref  RefactorSpacesApplicationId]
+      ServiceIdentifier: !GetAtt AddToCartService.ServiceIdentifier
+      UriPathRoute:
+        SourcePath: /unicorns/basket
+        IncludeChildPaths: false
+        ActivationState: ACTIVE
+        Methods:
+          - POST
+
+  RemoveCartService:
+    Type: AWS::RefactorSpaces::Service
+    DeletionPolicy: Delete
+    Properties:
+      Name: RemoveCartService
+      Description: Remove Unicorn From Cart
+      EnvironmentIdentifier: !If [ UseSSMEnvironmentIdValue, '{{resolve:ssm:UniShopEnvironmentId:1}}', !Ref  RefactorSpacesEnvironmentId]
+      ApplicationIdentifier: !If [ UseSSMApplicationIdValue, '{{resolve:ssm:UniShopApplicationId:1}}', !Ref  RefactorSpacesApplicationId]
+      EndpointType: LAMBDA
+      LambdaEndpoint:
+        Arn: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:RemoveUnicornFromBasket'
+  RemoveCartServiceRoute:
+    Type: AWS::RefactorSpaces::Route
+    Properties:
+      RouteType: URI_PATH
+      EnvironmentIdentifier: !If [ UseSSMEnvironmentIdValue, '{{resolve:ssm:UniShopEnvironmentId:1}}', !Ref  RefactorSpacesEnvironmentId]
+      ApplicationIdentifier: !If [ UseSSMApplicationIdValue, '{{resolve:ssm:UniShopApplicationId:1}}', !Ref  RefactorSpacesApplicationId]
+      ServiceIdentifier: !GetAtt RemoveCartService.ServiceIdentifier
+      UriPathRoute:
+        SourcePath: /unicorns/basket
+        IncludeChildPaths: false
+        ActivationState: ACTIVE
+        Methods:
+          - DELETE
+  
+  GetCartService:
+    Type: AWS::RefactorSpaces::Service
+    DeletionPolicy: Delete
+    Properties:
+      Name: GetCartService
+      Description: Get Cart Contents
+      EnvironmentIdentifier: !If [ UseSSMEnvironmentIdValue, '{{resolve:ssm:UniShopEnvironmentId:1}}', !Ref  RefactorSpacesEnvironmentId]
+      ApplicationIdentifier: !If [ UseSSMApplicationIdValue, '{{resolve:ssm:UniShopApplicationId:1}}', !Ref  RefactorSpacesApplicationId]
+      EndpointType: LAMBDA
+      LambdaEndpoint:
+        Arn: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:GetUnicornBasket'
+  GetCartServiceRoute:
+    Type: AWS::RefactorSpaces::Route
+    Properties:
+      RouteType: URI_PATH
+      EnvironmentIdentifier: !If [ UseSSMEnvironmentIdValue, '{{resolve:ssm:UniShopEnvironmentId:1}}', !Ref  RefactorSpacesEnvironmentId]
+      ApplicationIdentifier: !If [ UseSSMApplicationIdValue, '{{resolve:ssm:UniShopApplicationId:1}}', !Ref  RefactorSpacesApplicationId]
+      ServiceIdentifier: !GetAtt GetCartService.ServiceIdentifier
+      UriPathRoute:
+        SourcePath: /unicorns/basket
+        IncludeChildPaths: true
+        ActivationState: ACTIVE
+        Methods:
+          - GET
+
+  UnicornBasketModel:
+    Type: AWS::ApiGateway::Model
+    Properties:
+      RestApiId: !If [ UseSSMApiGatewayIdValue, '{{resolve:ssm:UniShopApiGatewayId:1}}', !Ref  RefactorSpacesApiGatewayId]
+      ContentType: application/json
+      Description: Schema for UniCo Basket
+      Name: UnicornBasket
+      Schema:
+        $schema: 'http://json-schema.org/draft-04/schema#'
+        title: UnicornBasket
+        type: array
+        items:
+          type: object
+          properties:
+            uuid:
+              type: string
