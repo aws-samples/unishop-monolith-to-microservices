@@ -27,7 +27,7 @@ Resources:
       ProxyType: API_GATEWAY
       ApiGatewayProxy:
         EndpointType: REGIONAL
-
+      
   UniShopLegacyService:
     Type: AWS::RefactorSpaces::Service
     Properties:
@@ -47,6 +47,30 @@ Resources:
       ServiceIdentifier: !GetAtt UniShopLegacyService.ServiceIdentifier
       EnvironmentIdentifier: !Ref UniShopRefactorSpacesModernizationEnvironment
       ApplicationIdentifier: !GetAtt UniShopRefactorSpacesApplication.ApplicationIdentifier
+
+  UniShopEnvironmentIdSSM:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: UniShopEnvironmentId
+      Value: !GetAtt UniShopRefactorSpacesModernizationEnvironment.EnvironmentIdentifier
+      Type: String
+      Description: UniShop Application Id
+
+  UniShopApplicationIdSSM:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: UniShopApplicationId
+      Value: !GetAtt UniShopRefactorSpacesApplication.ApplicationIdentifier
+      Type: String
+      Description: UniShop Environment Id
+
+  UniShopApiGatewayIdSSM:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: UniShopApiGatewayId
+      Value: !GetAtt UniShopRefactorSpacesApplication.ApiGatewayIdentifier
+      Type: String
+      Description: UniShop API Gateway Id
 
 Outputs:
   UniShopApiGatewayProxyUrl:
