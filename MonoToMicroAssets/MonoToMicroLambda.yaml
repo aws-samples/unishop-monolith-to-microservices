@@ -1,0 +1,42 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Amazon Lambda Services stack for the Application Modernization Workshop/Immersion Day
+Resources:
+  AddUnicornToBasketLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: AddUnicornToBasket
+      Description: Lambda that adds a unicorn into a basket.
+      Runtime: java11
+      MemorySize: 1024
+      Timeout: 30
+      Code:
+        S3Bucket: '{{resolve:ssm:LambdaAssetBucketName:1}}'
+        S3Key: MonoToMicroLambda-0.0.1.jar
+      Role: !Sub 'arn:aws:iam::${AWS::AccountId}:role/service-role/MonoToMicroLambdaRole'
+      Handler: com.monoToMicro.Lambda.UnicornBasketImpl::addUnicornToBasket
+  RemoveUnicornFromBasketLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: RemoveUnicornFromBasket
+      Description: Lambda that removes a unicorn from a basket.
+      Runtime: java11
+      MemorySize: 1024
+      Timeout: 30
+      Code:
+        S3Bucket: '{{resolve:ssm:LambdaAssetBucketName:1}}'
+        S3Key: MonoToMicroLambda-0.0.1.jar
+      Role: !Sub 'arn:aws:iam::${AWS::AccountId}:role/service-role/MonoToMicroLambdaRole'
+      Handler: com.monoToMicro.Lambda.UnicornBasketImpl::removeUnicornFromBasket
+  GetUnicornsBasketLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: GetUnicornsBasket
+      Description: Lambda that lists the unicorns in a basket.
+      Runtime: java11
+      MemorySize: 1024
+      Timeout: 30
+      Code:
+        S3Bucket: '{{resolve:ssm:LambdaAssetBucketName:1}}'
+        S3Key: MonoToMicroLambda-0.0.1.jar
+      Role: !Sub 'arn:aws:iam::${AWS::AccountId}:role/service-role/MonoToMicroLambdaRole'
+      Handler: com.monoToMicro.Lambda.UnicornBasketImpl::getUnicornsBasket
