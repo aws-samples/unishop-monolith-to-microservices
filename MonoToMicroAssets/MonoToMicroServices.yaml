@@ -169,7 +169,7 @@ Resources:
   LambdaRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: MonoToMicroCustomResourceRole
+      RoleName: !Sub "${AWS::StackName}MonoToMicroCustomResourceRole"
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
