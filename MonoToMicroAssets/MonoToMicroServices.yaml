@@ -81,7 +81,7 @@ Resources:
       ApplicationIdentifier: !If [ UseSSMApplicationIdValue, '{{resolve:ssm:UniShopApplicationId:1}}', !Ref  RefactorSpacesApplicationId]
       EndpointType: LAMBDA
       LambdaEndpoint:
-        Arn: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:GetUnicornBasket'
+        Arn: !Sub 'arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:GetUnicornsBasket'
   GetCartServiceRoute:
     Type: AWS::RefactorSpaces::Route
     Properties:
@@ -98,6 +98,7 @@ Resources:
 
   UnicornBasketModel:
     Type: AWS::ApiGateway::Model
+    DependsOn: GetCartServiceRoute
     Properties:
       RestApiId: !If [ UseSSMApiGatewayIdValue, '{{resolve:ssm:UniShopApiGatewayId:1}}', !Ref  RefactorSpacesApiGatewayId]
       ContentType: application/json
@@ -112,3 +113,453 @@ Resources:
           properties:
             uuid:
               type: string
+
+  UpdateGetCartService:
+    Type: AWS::CloudFormation::CustomResource
+    Version: "1.0"
+    DependsOn: GetCartServiceRoute
+    Properties:
+      ServiceToken: !GetAtt IntegrationUpdaterFunction.Arn
+      ApiGatewayId: !If [ UseSSMApiGatewayIdValue, '{{resolve:ssm:UniShopApiGatewayId:1}}', !Ref  RefactorSpacesApiGatewayId]
+      ResourcePath: /unicorns/basket/{proxy+}
+      CORS: true
+      Method: GET
+      Responses:
+        - 200
+      RequestTemplates:
+        'application/json': "#set($inputRoot = $input.path('$'))\n{\n  \"uuid\" : \"$input.params('proxy')\"\n}\n"
+
+  UpdatePostCartService:
+    Type: AWS::CloudFormation::CustomResource
+    DependsOn: AddToCartServiceRoute
+    Version: "1.0"
+    Properties:
+      ServiceToken: !GetAtt IntegrationUpdaterFunction.Arn
+      ApiGatewayId: !If [ UseSSMApiGatewayIdValue, '{{resolve:ssm:UniShopApiGatewayId:1}}', !Ref  RefactorSpacesApiGatewayId]
+      ResourcePath: /unicorns/basket
+      CORS: true
+      Method: POST
+      Responses:
+        - 200
+
+  UpdateDeleteCartService:
+    Type: AWS::CloudFormation::CustomResource
+    DependsOn: RemoveCartServiceRoute
+    Version: "1.0"
+    Properties:
+      ServiceToken: !GetAtt IntegrationUpdaterFunction.Arn
+      ApiGatewayId: !If [ UseSSMApiGatewayIdValue, '{{resolve:ssm:UniShopApiGatewayId:1}}', !Ref  RefactorSpacesApiGatewayId]
+      ResourcePath: /unicorns/basket
+      CORS: true
+      Method: DELETE
+      Responses:
+        - 200
+
+  DeleteGetCartService:
+    Type: AWS::CloudFormation::CustomResource
+    DependsOn: AddToCartServiceRoute
+    Version: "1.0"
+    Properties:
+      ServiceToken: !GetAtt IntegrationUpdaterFunction.Arn
+      ApiGatewayId: !If [ UseSSMApiGatewayIdValue, '{{resolve:ssm:UniShopApiGatewayId:1}}', !Ref  RefactorSpacesApiGatewayId]
+      ResourcePath: /unicorns/basket
+      Delete: true
+      Method: GET
+
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: MonoToMicroCustomResourceRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /service-role/
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: allowApiGatewayModifications
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: 'apigateway:*'
+                Resource: !Sub
+                  - 'arn:aws:apigateway:${AWS::Region}::/restapis/${ApiId}'
+                  - ApiId: !If [ UseSSMApiGatewayIdValue, '{{resolve:ssm:UniShopApiGatewayId:1}}', !Ref  RefactorSpacesApiGatewayId]
+              - Effect: Allow
+                Action: 'apigateway:*'
+                Resource: !Sub
+                  - 'arn:aws:apigateway:${AWS::Region}::/restapis/${ApiId}/*'
+                  - ApiId: !If [ UseSSMApiGatewayIdValue, '{{resolve:ssm:UniShopApiGatewayId:1}}', !Ref  RefactorSpacesApiGatewayId]
+
+  IntegrationUpdaterFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Sub "${AWS::StackName}IntegrationUpdaterFunction"
+      Description: Function to update the API Gateway integrations.
+      Role: !GetAtt LambdaRole.Arn
+      Runtime: nodejs14.x
+      Handler: index.handler
+      Timeout: 30
+      MemorySize: 1024
+      Code:
+        ZipFile: |
+          const AWS = require('aws-sdk');
+          const apiGWClient = new AWS.APIGateway();
+
+          const REQUIRED_PARAMS = ['ApiGatewayId', 'ResourcePath', 'Method'];
+
+          const missingRequiredParams = (params, required) => {
+              if (!params) {
+                  return required;
+              }
+              return required.reduce((miss, param) => (!params[param] ? [...miss, (param)] : miss), []);
+          };
+
+          const getApiResources = async (restApiId, position) => {
+              return new Promise((res, rej) => {
+                  apiGWClient.getResources({ restApiId, limit: 2, position }, (err, data) => {
+                      if (err) {
+                          console.log(`Error: ${err}`);
+                          return rej(err);
+                      }
+                      res(data);
+                  });
+              });
+          };
+
+          const getApiResource = async (restApiId, resourcePath) => {
+              try {
+                  let resourcesRes = await getApiResources(restApiId);
+                  while (resourcesRes.position && !resourcesRes.items.find((res) => res.path === resourcePath)) {
+                      resourcesRes = await getApiResources(restApiId, resourcesRes.position);
+                  }
+                  return resourcesRes.items.find((res) => res.path === resourcePath) || null;
+              }
+              catch (ex) {
+                  console.log('Failed to fetch resource', ex);
+                  return null;
+              }
+          };
+
+          const getMethod = async (restApiId, resourceId, httpMethod) => {
+              return new Promise((res, rej) => {
+                  apiGWClient.getMethod({ restApiId, resourceId, httpMethod }, function(err, data) {
+                      if (err) rej(err);
+                      else res(data);
+                  });
+              });
+          };
+
+          const deleteMethod = async (restApiId, resourceId, httpMethod) => {
+              return new Promise((res, rej) => {
+                  apiGWClient.deleteMethod({ restApiId, resourceId, httpMethod }, function(err, data) {
+                      if (err) rej(err);
+                      else res(data);
+                  });
+              });
+          };
+
+          const getIntegration = async (restApiId, resourceId, httpMethod) => {
+              return new Promise((res, rej) => {
+                  apiGWClient.getIntegration({ restApiId, resourceId, httpMethod }, function(err, data) {
+                      if (err) rej(err);
+                      else res(data);
+                  });
+              });
+          };
+
+          const getIntegrationResponse = async (restApiId, resourceId, httpMethod, statusCode) => {
+              return new Promise((res, rej) => {
+                  apiGWClient.getIntegrationResponse({ restApiId, resourceId, httpMethod, statusCode }, function(err, data) {
+                      if (err) {
+                          if (err.code === 'NotFoundException') res(undefined);
+                          else rej(err);
+                      }
+                      else res(data);
+                  });
+              });
+          };
+
+          const enableCors = async (restApiId, resourceId, httpMethod) => {
+              var params = {
+                  httpMethod,
+                  resourceId,
+                  restApiId,
+                  statusCode: '200',
+                  responseParameters: {
+                      'method.response.header.Access-Control-Allow-Headers': "\'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token\'",
+                      'method.response.header.Access-Control-Allow-Methods': `\'${httpMethod},OPTIONS\'`,
+                      'method.response.header.Access-Control-Allow-Origin': "\'*\'"
+                  }
+              };
+              console.log('Update Integration Response', params);
+              const existing = await getIntegrationResponse(restApiId, resourceId, httpMethod, '200');
+              console.log('Existing: ', existing);
+              if (!existing) {
+                  return new Promise((res, rej) => {
+                      apiGWClient.putIntegrationResponse(params, function(err, data) {
+                          console.log(`CORS Error: `, err);
+                          console.log(`CORS Data: `, data);
+                          if (err) rej(err);
+                          else res(data);
+                      });
+                  });
+              }
+              else {
+                  return Promise.resolve(existing);
+              }
+          };
+
+          const createIntegration = async (params) => {
+              return new Promise((res, rej) => {
+                  apiGWClient.putIntegration(params, function(err, data) {
+                      if (err) rej(err);
+                      else res(data);
+                  });
+              });
+          };
+
+          const updateMethodIntegration = async (restApiId, resourceId, httpMethod, requestTemplates, existingIntegration, enableCORS) => {
+              delete existingIntegration.type;
+              delete existingIntegration.requestParameters;
+              delete existingIntegration.integrationResponses;
+              if (requestTemplates) {
+                  existingIntegration.requestTemplates = requestTemplates;
+              }
+              existingIntegration.passthroughBehavior = 'WHEN_NO_TEMPLATES';
+              existingIntegration.contentHandling = 'CONVERT_TO_TEXT';
+              const params = {
+                  ...existingIntegration,
+                  restApiId,
+                  resourceId,
+                  httpMethod,
+                  integrationHttpMethod: 'POST',
+                  type: 'AWS'
+              };
+
+              const integration = await createIntegration(params);
+
+              if (enableCors) {
+                  try {
+                      console.log(`Enabling CORS for ${httpMethod} [${resourceId}]`);
+                      await enableCors(restApiId, resourceId, httpMethod);
+                  }
+                  catch (ex) {
+                      console.log(`Enabling CORS Failed ${ex}`);
+                      console.log(ex);
+                  }
+              }
+
+              return integration;
+          };
+
+          const addResponse = async (restApiId, resourceId, httpMethod, statusCode) => {
+              return new Promise((res, rej) => {
+                  apiGWClient.putMethodResponse({
+                      restApiId,
+                      resourceId,
+                      httpMethod,
+                      statusCode: `${statusCode}`,
+                      responseParameters: {
+                          'method.response.header.Access-Control-Allow-Headers': false,
+                          'method.response.header.Access-Control-Allow-Methods': false,
+                          'method.response.header.Access-Control-Allow-Origin': false
+                      }
+
+                  }, function(err, data) {
+                      if (err) rej(err);
+                      else res(data);
+                  });
+              });
+          };
+
+
+          const SUCCESS = "SUCCESS";
+          const FAILED = "FAILED";
+
+          const cfnSend = async (event, context, responseStatus, responseData, physicalResourceId, noEcho) => {
+              return new Promise((res, rej) => {
+                var responseBody = JSON.stringify({
+                    Status: responseStatus,
+                    Reason: "See the details in CloudWatch Log Stream: " + context.logStreamName,
+                    PhysicalResourceId: physicalResourceId || context.logStreamName,
+                    StackId: event.StackId,
+                    RequestId: event.RequestId,
+                    LogicalResourceId: event.LogicalResourceId,
+                    NoEcho: noEcho || false,
+                    Data: responseData
+                });
+
+                console.log("Response body:\n", responseBody);
+
+                var https = require("https");
+                var url = require("url");
+
+                var parsedUrl = url.parse(event.ResponseURL);
+                var options = {
+                    hostname: parsedUrl.hostname,
+                    port: 443,
+                    path: parsedUrl.path,
+                    method: "PUT",
+                    headers: {
+                        "content-type": "",
+                        "content-length": responseBody.length
+                    }
+                };
+
+                console.log("Request options:\n", options);
+
+                var request = https.request(options, function(response) {
+                    console.log("Status code: " + response.statusCode);
+                    console.log("Status message: " + response.statusMessage);
+                    context.done();
+                    res(responseBody);
+                });
+
+                request.on("error", function(error) {
+                    console.log("send(..) failed executing https.request(..): " + error);
+                    context.done();
+                    rej(error);
+                });
+
+                request.write(responseBody);
+                request.end();
+              });
+          }
+
+          exports.handler = async (event, context) => {
+              console.log("Event body:\n", JSON.stringify(event));
+              if (event.RequestType === "Delete") {
+                  console.log(`Event: Delete`);
+                  if (event.ResponseURL) {
+                      await cfnSend(
+                          event,
+                          context,
+                          SUCCESS, { Message: 'Deleted' },
+                          `ApiGWUpdate-${
+                      event.ResourceProperties.ApiGatewayId
+                  }-${
+                      event.LogicalResourceId
+                      
+                  }-${
+                      event.ResourceProperties.Method
+                      
+                  }${
+                      event.ResourceProperties.Delete ? '-delete' : ''
+                      
+                  }`);
+                  }
+                  return {
+                      statusCode: 200,
+                      body: 'Deleted'
+                  };
+              }
+
+              let response = {};
+              const missingParams = missingRequiredParams(event.ResourceProperties, REQUIRED_PARAMS);
+              if (missingParams.length) {
+                  response = {
+                      statusCode: 400,
+                      body: {
+                          message: `Missing required resource properties: '${missingParams}'`
+                      }
+                  };
+              }
+              else {
+                  const apiGwId = event.ResourceProperties.ApiGatewayId;
+                  const resource = await getApiResource(apiGwId,
+                      event.ResourceProperties.ResourcePath);
+                  if (resource === null) {
+                      response = {
+                          statusCode: 404,
+                          body: {
+                              message: `Missing resource: '${event.ResourceProperties.ResourcePath}'`
+                          }
+                      };
+                  }
+                  else {
+                      if (event.ResourceProperties.Delete) {
+                          console.log(`Deleting method ${event.ResourceProperties.Method} for ${resource.id} [${resource.path}]`);
+                          let result = { message: `${event.ResourceProperties.Method} for ${resource.id} [${resource.path}] does not exist` };
+                          try {
+                              const method = await getMethod(apiGwId, resource.id, event.ResourceProperties.Method);
+                              console.log(method);
+                              result = await deleteMethod(apiGwId, resource.id, event.ResourceProperties.Method);
+                          }
+                          catch (ex) {
+                              if (ex.code === "NotFoundException") {
+                                  console.log(`Skipping delete: ${event.ResourceProperties.Method} for ${resource.id} [${resource.path}] does not exist.`);
+                              }
+                              else {
+                                  throw ex;
+                              }
+                          }
+                          response = {
+                              statusCode: 200,
+                              body: result
+                          };
+                      }
+                      else {
+                          if (event.ResourceProperties.Responses) {
+                              console.log(`Adding responses: ${event.ResourceProperties.Responses}`);
+                              for (const codeIdx in event.ResourceProperties.Responses) {
+                                  try {
+                                      await addResponse(apiGwId, resource.id, event.ResourceProperties.Method, event.ResourceProperties.Responses[codeIdx]);
+                                  }
+                                  catch (ex) {
+                                      if (ex.code === "ConflictException") {
+                                          console.log(`${event.ResourceProperties.Responses[codeIdx]} already exists - skipping`);
+                                      }
+                                      else {
+                                          throw ex;
+                                      }
+                                  }
+                              }
+                          }
+                          const integration = await getIntegration(apiGwId, resource.id, event.ResourceProperties.Method);
+                          try {
+                              const updated = await updateMethodIntegration(
+                                  apiGwId,
+                                  resource.id,
+                                  event.ResourceProperties.Method,
+                                  event.ResourceProperties.RequestTemplates,
+                                  integration,
+                                  event.ResourceProperties.CORS);
+                              response = {
+                                  statusCode: 200,
+                                  body: updated
+                              };
+                          }
+                          catch (ex) {
+                              console.log(`Failed to update integration: `, ex);
+                          }
+                      }
+                  }
+              }
+              if (event.ResponseURL) {
+                  await cfnSend(
+                      event,
+                      context,
+                      SUCCESS, response,
+                      `ApiGWUpdate-${
+                      event.ResourceProperties.ApiGatewayId
+                  }-${
+                      event.LogicalResourceId
+                      
+                  }-${
+                      event.ResourceProperties.Method
+                      
+                  }${
+                      event.ResourceProperties.Delete ? '-delete' : ''
+                      
+                  }`);
+              }
+              return response;
+          };
