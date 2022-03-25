@@ -166,6 +166,20 @@ Resources:
       Delete: true
       Method: GET
 
+  DeployUnicoApi:
+    Type: AWS::CloudFormation::CustomResource
+    DependsOn:
+      - DeleteGetCartService
+      - UpdateDeleteCartService
+      - UpdatePostCartService
+      - UpdateGetCartService
+      - UnicornBasketModel
+    Version: "1.0"
+    Properties:
+      ServiceToken: !GetAtt IntegrationUpdaterFunction.Arn
+      ApiGatewayId: !If [ UseSSMApiGatewayIdValue, '{{resolve:ssm:UniShopApiGatewayId:1}}', !Ref  RefactorSpacesApiGatewayId]
+      Deploy: prod
+
   LambdaRole:
     Type: AWS::IAM::Role
     Properties:
@@ -222,16 +236,24 @@ Resources:
               return required.reduce((miss, param) => (!params[param] ? [...miss, (param)] : miss), []);
           };
 
-          const getApiResources = async (restApiId, position) => {
+          const promisify = async (awsCall, params, ignoreErrors) => {
               return new Promise((res, rej) => {
-                  apiGWClient.getResources({ restApiId, limit: 2, position }, (err, data) => {
+                  awsCall.bind(apiGWClient)(params, (err, data) => {
                       if (err) {
-                          console.log(`Error: ${err}`);
-                          return rej(err);
+                          if (ignoreErrors && ignoreErrors.indexOf(err.code) >= 0) {
+                              res(undefined);
+                          } else {
+                              console.log(`Throwing error [${err.code} - not in ${ignoreErrors ? ignoreErrors : 'excluded codes'}]:\n`, err);
+                              rej(err);
+                          }
                       }
                       res(data);
                   });
               });
+          };
+
+          const getApiResources = async (restApiId, position) => {
+              return promisify(apiGWClient.getResources, { restApiId, limit: 2, position });
           };
 
           const getApiResource = async (restApiId, resourcePath) => {
@@ -249,42 +271,19 @@ Resources:
           };
 
           const getMethod = async (restApiId, resourceId, httpMethod) => {
-              return new Promise((res, rej) => {
-                  apiGWClient.getMethod({ restApiId, resourceId, httpMethod }, function(err, data) {
-                      if (err) rej(err);
-                      else res(data);
-                  });
-              });
+              return promisify(apiGWClient.getMethod, { restApiId, resourceId, httpMethod }, ['NotFoundException']);
           };
 
           const deleteMethod = async (restApiId, resourceId, httpMethod) => {
-              return new Promise((res, rej) => {
-                  apiGWClient.deleteMethod({ restApiId, resourceId, httpMethod }, function(err, data) {
-                      if (err) rej(err);
-                      else res(data);
-                  });
-              });
+              return promisify(apiGWClient.deleteMethod, { restApiId, resourceId, httpMethod }, ['NotFoundException']);
           };
 
           const getIntegration = async (restApiId, resourceId, httpMethod) => {
-              return new Promise((res, rej) => {
-                  apiGWClient.getIntegration({ restApiId, resourceId, httpMethod }, function(err, data) {
-                      if (err) rej(err);
-                      else res(data);
-                  });
-              });
+              return promisify(apiGWClient.getIntegration, { restApiId, resourceId, httpMethod });
           };
 
           const getIntegrationResponse = async (restApiId, resourceId, httpMethod, statusCode) => {
-              return new Promise((res, rej) => {
-                  apiGWClient.getIntegrationResponse({ restApiId, resourceId, httpMethod, statusCode }, function(err, data) {
-                      if (err) {
-                          if (err.code === 'NotFoundException') res(undefined);
-                          else rej(err);
-                      }
-                      else res(data);
-                  });
-              });
+              return promisify(apiGWClient.getIntegrationResponse, { restApiId, resourceId, httpMethod, statusCode }, ['NotFoundException']);
           };
 
           const enableCors = async (restApiId, resourceId, httpMethod) => {
@@ -293,24 +292,22 @@ Resources:
                   resourceId,
                   restApiId,
                   statusCode: '200',
+                  responseTemplates: {
+                      'application/json': '',  
+                  },
                   responseParameters: {
                       'method.response.header.Access-Control-Allow-Headers': "\'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token\'",
                       'method.response.header.Access-Control-Allow-Methods': `\'${httpMethod},OPTIONS\'`,
                       'method.response.header.Access-Control-Allow-Origin': "\'*\'"
                   }
               };
-              console.log('Update Integration Response', params);
               const existing = await getIntegrationResponse(restApiId, resourceId, httpMethod, '200');
-              console.log('Existing: ', existing);
+              if (existing) {
+                  console.log('Existing Integration Response:\n', JSON.stringify(existing, null, 2));   
+              }
               if (!existing) {
-                  return new Promise((res, rej) => {
-                      apiGWClient.putIntegrationResponse(params, function(err, data) {
-                          console.log(`CORS Error: `, err);
-                          console.log(`CORS Data: `, data);
-                          if (err) rej(err);
-                          else res(data);
-                      });
-                  });
+                  console.log('Update Integration Response:\n', JSON.stringify(params, null, 2));
+                  return promisify(apiGWClient.putIntegrationResponse, params);
               }
               else {
                   return Promise.resolve(existing);
@@ -318,35 +315,30 @@ Resources:
           };
 
           const createIntegration = async (params) => {
-              return new Promise((res, rej) => {
-                  apiGWClient.putIntegration(params, function(err, data) {
-                      if (err) rej(err);
-                      else res(data);
-                  });
-              });
+              return promisify(apiGWClient.putIntegration, params);
           };
 
-          const updateMethodIntegration = async (restApiId, resourceId, httpMethod, requestTemplates, existingIntegration, enableCORS) => {
-              delete existingIntegration.type;
-              delete existingIntegration.requestParameters;
-              delete existingIntegration.integrationResponses;
-              if (requestTemplates) {
-                  existingIntegration.requestTemplates = requestTemplates;
-              }
-              existingIntegration.passthroughBehavior = 'WHEN_NO_TEMPLATES';
-              existingIntegration.contentHandling = 'CONVERT_TO_TEXT';
+          const updateMethodIntegration = async (restApiId, resourceId, httpMethod, requestTemplates, existingIntegration, enableMethodCors) => {
               const params = {
                   ...existingIntegration,
                   restApiId,
                   resourceId,
                   httpMethod,
                   integrationHttpMethod: 'POST',
-                  type: 'AWS'
+                  type: 'AWS',
+                  passthroughBehavior: 'WHEN_NO_TEMPLATES',
+                  contentHandling: 'CONVERT_TO_TEXT',
+                  requestTemplates,
+                  requestParameters: undefined,
+                  integrationResponses: undefined,
               };
+
+              console.log('Integration Parameters:\n', JSON.stringify(params, null, 2));
 
               const integration = await createIntegration(params);
 
-              if (enableCors) {
+              
+              if (enableMethodCors) {
                   try {
                       console.log(`Enabling CORS for ${httpMethod} [${resourceId}]`);
                       await enableCors(restApiId, resourceId, httpMethod);
@@ -361,23 +353,17 @@ Resources:
           };
 
           const addResponse = async (restApiId, resourceId, httpMethod, statusCode) => {
-              return new Promise((res, rej) => {
-                  apiGWClient.putMethodResponse({
-                      restApiId,
-                      resourceId,
-                      httpMethod,
-                      statusCode: `${statusCode}`,
-                      responseParameters: {
-                          'method.response.header.Access-Control-Allow-Headers': false,
-                          'method.response.header.Access-Control-Allow-Methods': false,
-                          'method.response.header.Access-Control-Allow-Origin': false
-                      }
-
-                  }, function(err, data) {
-                      if (err) rej(err);
-                      else res(data);
-                  });
-              });
+              return promisify(apiGWClient.putMethodResponse, {
+                  restApiId,
+                  resourceId,
+                  httpMethod,
+                  statusCode: `${statusCode}`,
+                  responseParameters: {
+                      'method.response.header.Access-Control-Allow-Headers': false,
+                      'method.response.header.Access-Control-Allow-Methods': false,
+                      'method.response.header.Access-Control-Allow-Origin': false
+                  }
+              }, ['ConflictException']);
           };
 
 
@@ -386,180 +372,243 @@ Resources:
 
           const cfnSend = async (event, context, responseStatus, responseData, physicalResourceId, noEcho) => {
               return new Promise((res, rej) => {
-                var responseBody = JSON.stringify({
-                    Status: responseStatus,
-                    Reason: "See the details in CloudWatch Log Stream: " + context.logStreamName,
-                    PhysicalResourceId: physicalResourceId || context.logStreamName,
-                    StackId: event.StackId,
-                    RequestId: event.RequestId,
-                    LogicalResourceId: event.LogicalResourceId,
-                    NoEcho: noEcho || false,
-                    Data: responseData
-                });
+                  var responseBody = JSON.stringify({
+                      Status: responseStatus,
+                      Reason: "See the details in CloudWatch Log Stream: " + context.logStreamName,
+                      PhysicalResourceId: physicalResourceId || context.logStreamName,
+                      StackId: event.StackId,
+                      RequestId: event.RequestId,
+                      LogicalResourceId: event.LogicalResourceId,
+                      NoEcho: noEcho || false,
+                      Data: responseData
+                  });
 
-                console.log("Response body:\n", responseBody);
+                  console.log("Response body:\n", responseBody);
 
-                var https = require("https");
-                var url = require("url");
+                  var https = require("https");
+                  var url = require("url");
 
-                var parsedUrl = url.parse(event.ResponseURL);
-                var options = {
-                    hostname: parsedUrl.hostname,
-                    port: 443,
-                    path: parsedUrl.path,
-                    method: "PUT",
-                    headers: {
-                        "content-type": "",
-                        "content-length": responseBody.length
-                    }
-                };
-
-                console.log("Request options:\n", options);
-
-                var request = https.request(options, function(response) {
-                    console.log("Status code: " + response.statusCode);
-                    console.log("Status message: " + response.statusMessage);
-                    context.done();
-                    res(responseBody);
-                });
-
-                request.on("error", function(error) {
-                    console.log("send(..) failed executing https.request(..): " + error);
-                    context.done();
-                    rej(error);
-                });
-
-                request.write(responseBody);
-                request.end();
-              });
-          }
-
-          exports.handler = async (event, context) => {
-              console.log("Event body:\n", JSON.stringify(event));
-              if (event.RequestType === "Delete") {
-                  console.log(`Event: Delete`);
-                  if (event.ResponseURL) {
-                      await cfnSend(
-                          event,
-                          context,
-                          SUCCESS, { Message: 'Deleted' },
-                          `ApiGWUpdate-${
-                      event.ResourceProperties.ApiGatewayId
-                  }-${
-                      event.LogicalResourceId
-                      
-                  }-${
-                      event.ResourceProperties.Method
-                      
-                  }${
-                      event.ResourceProperties.Delete ? '-delete' : ''
-                      
-                  }`);
-                  }
-                  return {
-                      statusCode: 200,
-                      body: 'Deleted'
-                  };
-              }
-
-              let response = {};
-              const missingParams = missingRequiredParams(event.ResourceProperties, REQUIRED_PARAMS);
-              if (missingParams.length) {
-                  response = {
-                      statusCode: 400,
-                      body: {
-                          message: `Missing required resource properties: '${missingParams}'`
+                  var parsedUrl = url.parse(event.ResponseURL);
+                  var options = {
+                      hostname: parsedUrl.hostname,
+                      port: 443,
+                      path: parsedUrl.path,
+                      method: "PUT",
+                      headers: {
+                          "content-type": "",
+                          "content-length": responseBody.length
                       }
                   };
+
+                  console.log("Request options:\n", options);
+
+                  var request = https.request(options, function (response) {
+                      console.log("Status code: " + response.statusCode);
+                      console.log("Status message: " + response.statusMessage);
+                      context.done();
+                      res(responseBody);
+                  });
+
+                  request.on("error", function (error) {
+                      console.log("send(..) failed executing https.request(..): " + error);
+                      context.done();
+                      rej(error);
+                  });
+
+                  request.write(responseBody);
+                  request.end();
+              });
+          };
+
+          const physicalId = (event) => {
+              return `ApiGWUpdate-${event.ResourceProperties.ApiGatewayId
+                  }-${event.LogicalResourceId
+
+                  }-${event.ResourceProperties.Method || `CR`
+                  }${event.ResourceProperties.Delete ? '-delete' : ''}`;
+          };
+
+          const failedCreation = async (event, context, message) => {
+
+              if (event.ResponseURL) {
+                  await cfnSend(
+                      event,
+                      context,
+                      FAILED, { Message: message },
+                      physicalId(event)
+                  );
               }
-              else {
-                  const apiGwId = event.ResourceProperties.ApiGatewayId;
-                  const resource = await getApiResource(apiGwId,
-                      event.ResourceProperties.ResourcePath);
-                  if (resource === null) {
-                      response = {
-                          statusCode: 404,
-                          body: {
-                              message: `Missing resource: '${event.ResourceProperties.ResourcePath}'`
-                          }
+
+              return {
+                  statusCode: 400,
+                  body: {
+                      message
+                  },
+              };
+          };
+
+          const virtualDelete = async (event, context) => {
+              console.log(`Deleting virtual CR`);
+              if (event.ResponseURL) {
+                  await cfnSend(
+                      event,
+                      context,
+                      SUCCESS, { Message: 'Deleted' },
+                      physicalId(event)
+                  );
+              }
+              return {
+                  statusCode: 200,
+                  body: 'Deleted'
+              };
+          };
+
+          const deleteOperation = async (event, context, apiGwId, resource) => {
+              let result = {};
+              console.log(`Deleting method ${event.ResourceProperties.Method} for ${resource.id} [${resource.path}]`);
+              try {
+                  const method = await getMethod(apiGwId, resource.id, event.ResourceProperties.Method);
+                  if (method) {
+                      console.log('Deleting method:\n', JSON.stringify(method, null, 2));
+                      result = await deleteMethod(apiGwId, resource.id, event.ResourceProperties.Method);
+                  } else {
+                      console.log(`Skipping delete: ${event.ResourceProperties.Method} for ${resource.id} [${resource.path}] does not exist.`);
+                      result = {
+                          message: `Skipping delete: ${event.ResourceProperties.Method} for ${resource.id} [${resource.path}] does not exist.`
                       };
                   }
-                  else {
-                      if (event.ResourceProperties.Delete) {
-                          console.log(`Deleting method ${event.ResourceProperties.Method} for ${resource.id} [${resource.path}]`);
-                          let result = { message: `${event.ResourceProperties.Method} for ${resource.id} [${resource.path}] does not exist` };
-                          try {
-                              const method = await getMethod(apiGwId, resource.id, event.ResourceProperties.Method);
-                              console.log(method);
-                              result = await deleteMethod(apiGwId, resource.id, event.ResourceProperties.Method);
-                          }
-                          catch (ex) {
-                              if (ex.code === "NotFoundException") {
-                                  console.log(`Skipping delete: ${event.ResourceProperties.Method} for ${resource.id} [${resource.path}] does not exist.`);
-                              }
-                              else {
-                                  throw ex;
-                              }
-                          }
-                          response = {
-                              statusCode: 200,
-                              body: result
-                          };
+              }
+              catch (ex) {
+                  console.log('Failed to delete method ${event.ResourceProperties.Method} for ${resource.id} [${resource.path}]', JSON.stringify(ex, null, 2));
+                  return failedCreation(event, context, `Failed to delete method ${event.ResourceProperties.Method} for ${resource.id} [${resource.path}]`);
+              }
+              return {
+                  statusCode: 200,
+                  body: result
+              };
+          };
+
+          const updateOperation = async (event, context, apiGwId, resource) => {
+
+              if (event.ResourceProperties.Responses) {
+                  console.log(`Adding responses: ${event.ResourceProperties.Responses}`);
+                  for (const codeIdx in event.ResourceProperties.Responses) {
+                      try {
+                          await addResponse(apiGwId, resource.id, event.ResourceProperties.Method, event.ResourceProperties.Responses[codeIdx]);
                       }
-                      else {
-                          if (event.ResourceProperties.Responses) {
-                              console.log(`Adding responses: ${event.ResourceProperties.Responses}`);
-                              for (const codeIdx in event.ResourceProperties.Responses) {
-                                  try {
-                                      await addResponse(apiGwId, resource.id, event.ResourceProperties.Method, event.ResourceProperties.Responses[codeIdx]);
-                                  }
-                                  catch (ex) {
-                                      if (ex.code === "ConflictException") {
-                                          console.log(`${event.ResourceProperties.Responses[codeIdx]} already exists - skipping`);
-                                      }
-                                      else {
-                                          throw ex;
-                                      }
-                                  }
-                              }
-                          }
-                          const integration = await getIntegration(apiGwId, resource.id, event.ResourceProperties.Method);
-                          try {
-                              const updated = await updateMethodIntegration(
-                                  apiGwId,
-                                  resource.id,
-                                  event.ResourceProperties.Method,
-                                  event.ResourceProperties.RequestTemplates,
-                                  integration,
-                                  event.ResourceProperties.CORS);
-                              response = {
-                                  statusCode: 200,
-                                  body: updated
-                              };
-                          }
-                          catch (ex) {
-                              console.log(`Failed to update integration: `, ex);
-                          }
+                      catch (ex) {
+                          return failedCreation(event, context, `Failed to add response ${event.ResourceProperties.Responses[codeIdx]} for method ${event.ResourceProperties.Method} for ${resource.id} [${resource.path}]`);
                       }
                   }
               }
+              
+              const integration = await getIntegration(apiGwId, resource.id, event.ResourceProperties.Method);
+
+              console.log('Existing Integration:\n', JSON.stringify(integration, null, 2));
+
+              const updated = await updateMethodIntegration(
+                  apiGwId,
+                  resource.id,
+                  event.ResourceProperties.Method,
+                  event.ResourceProperties.RequestTemplates,
+                  integration,
+                  event.ResourceProperties.CORS);
+
+              return {
+                  statusCode: 200,
+                  body: updated
+              };
+          };
+
+          const deployOperation = async (event, context) => {
+              if (!event.ResourceProperties.ApiGatewayId) {
+                  return await failedCreation(event, context, `Missing required resource properties: 'ApiGatewayId'`);
+              }
+
+              const apiGwId = event.ResourceProperties.ApiGatewayId;
+
+              const params = {
+                  restApiId: apiGwId,
+                  stageName: event.ResourceProperties.Deploy
+              };
+
+              let response = {};
+
+              try {
+                  response = await promisify(apiGWClient.createDeployment, params);
+              } catch (ex) {
+                  console.log(`Failed to deploy ${event.ResourceProperties.ApiGatewayId} - Stage: ${event.ResourceProperties.Deploy}`, ex);
+                  return await failedCreation(event, context, `Failed to deploy ${event.ResourceProperties.ApiGatewayId} - Stage: ${event.ResourceProperties.Deploy}`);
+              }
+
               if (event.ResponseURL) {
                   await cfnSend(
                       event,
                       context,
                       SUCCESS, response,
-                      `ApiGWUpdate-${
-                      event.ResourceProperties.ApiGatewayId
-                  }-${
-                      event.LogicalResourceId
-                      
-                  }-${
-                      event.ResourceProperties.Method
-                      
-                  }${
-                      event.ResourceProperties.Delete ? '-delete' : ''
-                      
-                  }`);
+                      physicalId(event)
+                  );
               }
+
+              return {
+                  statusCode: 200,
+                  body: `Deployed ${event.ResourceProperties.ApiGatewayId} - Stage: ${event.ResourceProperties.Deploy}`,
+              };
+          };
+
+          exports.handler = async (event, context) => {
+              console.log("Event body:\n", JSON.stringify(event));
+
+              if (event.RequestType === "Delete") {
+                  return await virtualDelete(event, context);
+              }
+
+              if (event.ResourceProperties.Deploy) {
+                  return await deployOperation(event, context);
+              }
+
+              let response = {};
+
+              const missingParams = missingRequiredParams(event.ResourceProperties, REQUIRED_PARAMS);
+
+              if (missingParams.length) {
+                  return await failedCreation(event, context, `Missing required resource properties: '${missingParams}'`);
+              } else {
+                  const apiGwId = event.ResourceProperties.ApiGatewayId;
+                  const resource = await getApiResource(apiGwId, event.ResourceProperties.ResourcePath);
+
+                  if (resource === null) {
+                      return await failedCreation(event, context, `Missing resource: '${event.ResourceProperties.ResourcePath}'`);
+                  }
+                  else {
+                      if (event.ResourceProperties.Delete) {
+                          try {
+                              response = await deleteOperation(event, context, apiGwId, resource);
+                          } catch (ex) {
+                              console.log(`Failed to delete method: `, ex);
+                              return await failedCreation(event, context, `Failed to delete method: '${ex.message}'`);
+                          }
+                      }
+                      else {
+                          try {
+                              response = await updateOperation(event, context, apiGwId, resource);
+                          } catch (ex) {
+                              console.log(`Failed to update integration: `, ex);
+                              return await failedCreation(event, context, `Failed to update integration: '${ex.message}'`);
+                          }
+                      }
+                  }
+              }
+
+              if (event.ResponseURL) {
+                  await cfnSend(
+                      event,
+                      context,
+                      SUCCESS,
+                      response,
+                      physicalId(event)
+                  );
+              }
+
               return response;
           };
