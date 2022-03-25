@@ -44,11 +44,12 @@ public class UnicornBasketImpl implements RequestHandler<UnicornBasket, String> 
   private static final DynamoDbEnhancedAsyncClient client = DynamoDbEnhancedAsyncClient.builder()
     .dynamoDbClient(ddb)
     .build();
-  private static final DynamoDbAsyncTable<UnicornBasket> unicornBasketTable = client.table(
-    UNICORN_TABLE_NAME, TableSchema.fromBean(UnicornBasket.class));
 
   static {
     try {
+      final DynamoDbAsyncTable<UnicornBasket> unicornBasketTable = client.table(
+        UNICORN_TABLE_NAME, TableSchema.fromBean(UnicornBasket.class));
+
       unicornBasketTable.describeTable().get();
     } catch (DynamoDbException | ExecutionException | InterruptedException e) {
       System.out.println(e.getMessage());
@@ -62,6 +63,9 @@ public class UnicornBasketImpl implements RequestHandler<UnicornBasket, String> 
 
   public String addUnicornToBasket(UnicornBasket unicornBasket, Context context)
     throws ExecutionException, InterruptedException {
+    final DynamoDbAsyncTable<UnicornBasket> unicornBasketTable = client.table(
+      UNICORN_TABLE_NAME, TableSchema.fromBean(UnicornBasket.class));
+
     //Get current basket
     UnicornBasket currentBasket = unicornBasketTable.getItem(r ->
       r.key(Key.builder().partitionValue(unicornBasket.getUuid()).build())).get();
@@ -102,6 +106,9 @@ public class UnicornBasketImpl implements RequestHandler<UnicornBasket, String> 
 
   public String removeUnicornFromBasket(UnicornBasket unicornBasket, Context context)
     throws ExecutionException, InterruptedException {
+    final DynamoDbAsyncTable<UnicornBasket> unicornBasketTable = client.table(
+      UNICORN_TABLE_NAME, TableSchema.fromBean(UnicornBasket.class));
+
     //Get current basket
     UnicornBasket currentBasket = unicornBasketTable.getItem(r ->
       r.key(Key.builder().partitionValue(unicornBasket.getUuid()).build())).get();
@@ -115,7 +122,7 @@ public class UnicornBasketImpl implements RequestHandler<UnicornBasket, String> 
     List<Unicorn> currentUnicorns = currentBasket.getUnicorns();
     List<Unicorn> unicornsToRemove = unicornBasket.getUnicorns();
 
-    //Assuming only one will be added but checking for null or empty values
+    //Assuming only one will be removed but checking for null or empty values
     if (unicornsToRemove != null && !unicornsToRemove.isEmpty()) {
       Unicorn unicornToRemove = unicornsToRemove.get(0);
       String unicornToRemoveUuid = unicornToRemove.getUuid();
@@ -128,7 +135,7 @@ public class UnicornBasketImpl implements RequestHandler<UnicornBasket, String> 
             unicornBasketTable.deleteItem(currentBasket);
             return "Unicorn was removed and basket was deleted!";
           } else {
-            //keeping basket alive as more unicrons are in it
+            //keeping basket alive as more unicorns are in it
             currentBasket.setUnicorns(currentUnicorns);
             unicornBasketTable.putItem(currentBasket);
             return "Unicorn was removed! Other unicorns are still in basket";
@@ -142,11 +149,14 @@ public class UnicornBasketImpl implements RequestHandler<UnicornBasket, String> 
       }
       return "Didn't find a unicorn to remove";
     }
-    return "Are you sure you asked to remove a Unicron?";
+    return "Are you sure you asked to remove a Unicorn?";
   }
 
   public UnicornBasket getUnicornsBasket(UnicornBasket unicornBasket, Context context)
     throws ExecutionException, InterruptedException {
+    final DynamoDbAsyncTable<UnicornBasket> unicornBasketTable = client.table(
+      UNICORN_TABLE_NAME, TableSchema.fromBean(UnicornBasket.class));
+
     if (!StringUtils.isEmpty(unicornBasket.getUuid())) {
       return unicornBasketTable.getItem(r ->
         r.key(Key.builder().partitionValue(unicornBasket.getUuid()).build())).get();
