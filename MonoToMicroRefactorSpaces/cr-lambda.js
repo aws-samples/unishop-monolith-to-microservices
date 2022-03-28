@@ -16,7 +16,8 @@ const promisify = async (awsCall, params, ignoreErrors) => {
             if (err) {
                 if (ignoreErrors && ignoreErrors.indexOf(err.code) >= 0) {
                     res(undefined);
-                } else {
+                }
+                else {
                     console.log(`Throwing error [${err.code} - not in ${ignoreErrors ? ignoreErrors : 'excluded codes'}]:\n`, err);
                     rej(err);
                 }
@@ -27,14 +28,16 @@ const promisify = async (awsCall, params, ignoreErrors) => {
 };
 
 const getApiResources = async (restApiId, position) => {
-    return promisify(apiGWClient.getResources, { restApiId, limit: 2, position });
+    return promisify(apiGWClient.getResources, { restApiId, position });
 };
 
 const getApiResource = async (restApiId, resourcePath) => {
     try {
         let resourcesRes = await getApiResources(restApiId);
+        console.log('Resources:\n', JSON.stringify(resourcesRes.items));
         while (resourcesRes.position && !resourcesRes.items.find((res) => res.path === resourcePath)) {
             resourcesRes = await getApiResources(restApiId, resourcesRes.position);
+            console.log('Resources:\n', JSON.stringify(resourcesRes.items));
         }
         return resourcesRes.items.find((res) => res.path === resourcePath) || null;
     }
@@ -53,32 +56,37 @@ const deleteMethod = async (restApiId, resourceId, httpMethod) => {
 };
 
 const getIntegration = async (restApiId, resourceId, httpMethod) => {
-    return promisify(apiGWClient.getIntegration, { restApiId, resourceId, httpMethod });
+    return promisify(apiGWClient.getIntegration, { restApiId, resourceId, httpMethod }, ['NotFoundException']);
 };
 
 const getIntegrationResponse = async (restApiId, resourceId, httpMethod, statusCode) => {
     return promisify(apiGWClient.getIntegrationResponse, { restApiId, resourceId, httpMethod, statusCode }, ['NotFoundException']);
 };
 
-const enableCors = async (restApiId, resourceId, httpMethod) => {
+const enableCors = async (restApiId, resourceId, httpMethod, responseTemplates) => {
+    const methods = httpMethod != 'OPTIONS' ? `${httpMethod},OPTIONS` : 'DELETE,GET,HEAD,OPTIONS,PATCH,POST,PUT';
+
     var params = {
         httpMethod,
         resourceId,
         restApiId,
         statusCode: '200',
-        responseTemplates: {
-            'application/json': '',  
+        responseTemplates: responseTemplates || {
+            'application/json': '',
         },
         responseParameters: {
             'method.response.header.Access-Control-Allow-Headers': "\'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token\'",
-            'method.response.header.Access-Control-Allow-Methods': `\'${httpMethod},OPTIONS\'`,
+            'method.response.header.Access-Control-Allow-Methods': `\'${methods}\'`,
             'method.response.header.Access-Control-Allow-Origin': "\'*\'"
         }
     };
+
     const existing = await getIntegrationResponse(restApiId, resourceId, httpMethod, '200');
+
     if (existing) {
-        console.log('Existing Integration Response:\n', JSON.stringify(existing, null, 2));   
+        console.log('Existing Integration Response:\n', JSON.stringify(existing, null, 2));
     }
+
     if (!existing) {
         console.log('Update Integration Response:\n', JSON.stringify(params, null, 2));
         return promisify(apiGWClient.putIntegrationResponse, params);
@@ -92,30 +100,74 @@ const createIntegration = async (params) => {
     return promisify(apiGWClient.putIntegration, params);
 };
 
-const updateMethodIntegration = async (restApiId, resourceId, httpMethod, requestTemplates, existingIntegration, enableMethodCors) => {
+const createMethod = async (params) => {
+    return promisify(apiGWClient.putMethod, params);
+};
+
+const updateMethodIntegration = async (
+    restApiId,
+    resourceId,
+    httpMethod,
+    requestTemplates,
+    responseTemplates,
+    responses,
+    existingIntegration,
+    enableMethodCors,
+    isMock
+) => {
+
     const params = {
-        ...existingIntegration,
+        ...(existingIntegration || {}),
         restApiId,
         resourceId,
         httpMethod,
-        integrationHttpMethod: 'POST',
-        type: 'AWS',
+        integrationHttpMethod: isMock ? undefined : 'POST',
+        type: isMock ? 'MOCK' : 'AWS',
         passthroughBehavior: 'WHEN_NO_TEMPLATES',
         contentHandling: 'CONVERT_TO_TEXT',
         requestTemplates,
-        requestParameters: undefined,
+        requestParameters: {},
         integrationResponses: undefined,
     };
+
+    if (!existingIntegration) {
+        console.log(`Creating Method: ${httpMethod}`); 
+        const newMethodParams = {
+            authorizationType: "NONE",
+            requestParameters: {},
+            restApiId,
+            resourceId,
+            httpMethod
+        };
+        const newMethod = await createMethod(newMethodParams);
+        console.log(`Method: \n`, JSON.stringify(newMethod, null, 2));
+    }
 
     console.log('Integration Parameters:\n', JSON.stringify(params, null, 2));
 
     const integration = await createIntegration(params);
 
-    
+    console.log('Integration:\n', JSON.stringify(integration, null, 2));
+
+    if (responses) {
+        console.log(`Adding responses: ${responses}`);
+        for (const codeIdx in responses) {
+            try {
+                await addResponse(restApiId, resourceId, httpMethod, responses[codeIdx], isMock ? {
+                    'application/json': 'Empty'
+                } : undefined);
+            }
+            catch (ex) {
+                return failedCreation(event, context, `Failed to add response ${responses[codeIdx]} for method ${httpMethod} for ${resourceId}`);
+            }
+        }
+    }
+
+
     if (enableMethodCors) {
         try {
             console.log(`Enabling CORS for ${httpMethod} [${resourceId}]`);
-            await enableCors(restApiId, resourceId, httpMethod);
+            await enableCors(restApiId, resourceId, httpMethod, responseTemplates);
         }
         catch (ex) {
             console.log(`Enabling CORS Failed ${ex}`);
@@ -126,12 +178,13 @@ const updateMethodIntegration = async (restApiId, resourceId, httpMethod, reques
     return integration;
 };
 
-const addResponse = async (restApiId, resourceId, httpMethod, statusCode) => {
+const addResponse = async (restApiId, resourceId, httpMethod, statusCode, responseModels) => {
     return promisify(apiGWClient.putMethodResponse, {
         restApiId,
         resourceId,
         httpMethod,
         statusCode: `${statusCode}`,
+        responseModels,
         responseParameters: {
             'method.response.header.Access-Control-Allow-Headers': false,
             'method.response.header.Access-Control-Allow-Methods': false,
@@ -176,14 +229,14 @@ const cfnSend = async (event, context, responseStatus, responseData, physicalRes
 
         console.log("Request options:\n", options);
 
-        var request = https.request(options, function (response) {
+        var request = https.request(options, function(response) {
             console.log("Status code: " + response.statusCode);
             console.log("Status message: " + response.statusMessage);
             context.done();
             res(responseBody);
         });
 
-        request.on("error", function (error) {
+        request.on("error", function(error) {
             console.log("send(..) failed executing https.request(..): " + error);
             context.done();
             rej(error);
@@ -245,7 +298,8 @@ const deleteOperation = async (event, context, apiGwId, resource) => {
         if (method) {
             console.log('Deleting method:\n', JSON.stringify(method, null, 2));
             result = await deleteMethod(apiGwId, resource.id, event.ResourceProperties.Method);
-        } else {
+        }
+        else {
             console.log(`Skipping delete: ${event.ResourceProperties.Method} for ${resource.id} [${resource.path}] does not exist.`);
             result = {
                 message: `Skipping delete: ${event.ResourceProperties.Method} for ${resource.id} [${resource.path}] does not exist.`
@@ -264,29 +318,27 @@ const deleteOperation = async (event, context, apiGwId, resource) => {
 
 const updateOperation = async (event, context, apiGwId, resource) => {
 
-    if (event.ResourceProperties.Responses) {
-        console.log(`Adding responses: ${event.ResourceProperties.Responses}`);
-        for (const codeIdx in event.ResourceProperties.Responses) {
-            try {
-                await addResponse(apiGwId, resource.id, event.ResourceProperties.Method, event.ResourceProperties.Responses[codeIdx]);
-            }
-            catch (ex) {
-                return failedCreation(event, context, `Failed to add response ${event.ResourceProperties.Responses[codeIdx]} for method ${event.ResourceProperties.Method} for ${resource.id} [${resource.path}]`);
-            }
-        }
-    }
-    
     const integration = await getIntegration(apiGwId, resource.id, event.ResourceProperties.Method);
 
-    console.log('Existing Integration:\n', JSON.stringify(integration, null, 2));
+    if (integration) {
+        console.log('Existing Integration:\n', JSON.stringify(integration, null, 2));
+    }
+    else {
+        console.log(`Creating new Integration:\n`, JSON.stringify(event.ResourceProperties, null, 2));
+    }
+
 
     const updated = await updateMethodIntegration(
         apiGwId,
         resource.id,
         event.ResourceProperties.Method,
         event.ResourceProperties.RequestTemplates,
+        event.ResourceProperties.ResponseTemplates,
+        event.ResourceProperties.Responses,
         integration,
-        event.ResourceProperties.CORS);
+        event.ResourceProperties.CORS,
+        event.ResourceProperties.Mock
+    );
 
     return {
         statusCode: 200,
@@ -310,7 +362,8 @@ const deployOperation = async (event, context) => {
 
     try {
         response = await promisify(apiGWClient.createDeployment, params);
-    } catch (ex) {
+    }
+    catch (ex) {
         console.log(`Failed to deploy ${event.ResourceProperties.ApiGatewayId} - Stage: ${event.ResourceProperties.Deploy}`, ex);
         return await failedCreation(event, context, `Failed to deploy ${event.ResourceProperties.ApiGatewayId} - Stage: ${event.ResourceProperties.Deploy}`);
     }
@@ -347,18 +400,20 @@ exports.handler = async (event, context) => {
 
     if (missingParams.length) {
         return await failedCreation(event, context, `Missing required resource properties: '${missingParams}'`);
-    } else {
+    }
+    else {
         const apiGwId = event.ResourceProperties.ApiGatewayId;
         const resource = await getApiResource(apiGwId, event.ResourceProperties.ResourcePath);
 
-        if (resource === null) {
+        if (resource === null && !event.ResourceProperties.Mock) {
             return await failedCreation(event, context, `Missing resource: '${event.ResourceProperties.ResourcePath}'`);
         }
         else {
             if (event.ResourceProperties.Delete) {
                 try {
                     response = await deleteOperation(event, context, apiGwId, resource);
-                } catch (ex) {
+                }
+                catch (ex) {
                     console.log(`Failed to delete method: `, ex);
                     return await failedCreation(event, context, `Failed to delete method: '${ex.message}'`);
                 }
@@ -366,7 +421,8 @@ exports.handler = async (event, context) => {
             else {
                 try {
                     response = await updateOperation(event, context, apiGwId, resource);
-                } catch (ex) {
+                }
+                catch (ex) {
                     console.log(`Failed to update integration: `, ex);
                     return await failedCreation(event, context, `Failed to update integration: '${ex.message}'`);
                 }
