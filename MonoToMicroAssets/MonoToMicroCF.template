@@ -367,7 +367,7 @@
                     "configure" : {
                         "commands" : {
                             "0-clone-repo" : { "command" :
-                                "git clone --depth 1 --branch v7.1 https://github.com/aws-samples/unishop-monolith-to-microservices.git /home/ec2-user/MonoToMicro"
+                                "git clone https://github.com/aws-samples/unishop-monolith-to-microservices.git /home/ec2-user/MonoToMicro"
                             },
                             "1-create-tables" : { "command" :
                                     { "Fn::Join" : ["",[ 

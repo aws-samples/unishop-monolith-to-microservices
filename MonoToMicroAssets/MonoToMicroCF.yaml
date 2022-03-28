@@ -253,7 +253,7 @@ Resources:
           commands:
             0-clone-repo:
               command: >-
-                git clone --depth 1 --branch v7.1 
+                git clone
                 https://github.com/aws-samples/unishop-monolith-to-microservices.git
                 /home/ec2-user/MonoToMicro
             1-create-tables:
