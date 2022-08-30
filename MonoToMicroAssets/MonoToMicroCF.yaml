@@ -293,11 +293,25 @@ Resources:
                     cd /home/ec2-user/MonoToMicro/MonoToMicroLambda
                   - |
                     ./gradlew clean shadowJar
-            4-modify-configuration:
-              command: >-
-                sed -i "s/:\/\/.*\"/:\/\/$(curl -s
-                http://169.254.169.254/latest/meta-data/public-hostname)\"/g"
-                /home/ec2-user/MonoToMicro/MonoToMicroUI/config.json
+            4-install-nginx:
+              command: !Join 
+                - ''
+                - - |
+                    amazon-linux-extras enable epel
+                  - >
+                    yum install -y epel-release
+                  - >
+                    yum install -y nginx
+                  - >
+                    systemctl enable nginx
+                  - >
+                    chown -R nginx:nginx /home/ec2-user/MonoToMicro/MonoToMicroUI
+                  - >
+                    chmod -R 755 /home
+                  - >
+                    sed -i'' -e 's|/usr/share/nginx/html|/home/ec2-user/MonoToMicro/MonoToMicroUI|g' /etc/nginx/nginx.conf
+                  - >
+                    systemctl start nginx
             5-populate-buckets:
               command: !Join 
                 - ''
@@ -315,13 +329,11 @@ Resources:
 
                   - >
                     aws s3 cp /home/ec2-user/MonoToMicro/MonoToMicroUI
-                    s3://$UI_RANDOM_NAME/ --recursive --grants
-                    read=uri=http://acs.amazonaws.com/groups/global/AllUsers
+                    s3://$UI_RANDOM_NAME/ --recursive
                   - >
                     aws s3 cp
                     /home/ec2-user/MonoToMicro/MonoToMicroLambda/build/libs
-                    s3://$ASSETS_RANDOM_NAME/ --recursive --grants
-                    read=uri=http://acs.amazonaws.com/groups/global/AllUsers
+                    s3://$ASSETS_RANDOM_NAME/ --recursive
         create-service-files:
           files:
             /etc/systemd/system/mono2micro.service:
