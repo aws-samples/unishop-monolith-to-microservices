@@ -5,6 +5,14 @@ Parameters:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
     Description: Use an AMI of your choosing, we recommend to use the latest available
+  MonolithRepository:
+    Type: String
+    Default: https://github.com/fabbazon/unishop-monolith-to-microservices.git
+    Description: The repo to clone for the Monolith Legacy Application
+  MonolithBranch:
+    Type: String
+    Default: reinvent-2022
+    Description: The repo branch to use for the Monolith Legacy Application
 Resources:
   MonoToMicroVPC:
     Type: AWS::EC2::VPC
@@ -252,10 +260,13 @@ Resources:
         configure:
           commands:
             0-clone-repo:
-              command: >-
-                git clone
-                https://github.com/aws-samples/unishop-monolith-to-microservices.git
-                /home/ec2-user/MonoToMicro
+              command: 
+                !Sub |
+                  git clone
+                  --depth 1
+                  --branch ${MonolithBranch}
+                  ${MonolithRepository}
+                  /home/ec2-user/MonoToMicro
             1-create-tables:
               command: !Join 
                 - ''
