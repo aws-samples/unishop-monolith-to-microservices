@@ -183,6 +183,7 @@ Resources:
                   - /*
       Roles:
         - !Ref S3Role
+
   S3Role:
     Type: AWS::IAM::Role
     Properties:
@@ -200,6 +201,7 @@ Resources:
         - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
         - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
       Path: /
+
   DBInstance:
     Type: AWS::RDS::DBInstance
     DeletionPolicy: Delete
@@ -219,14 +221,17 @@ Resources:
       Tags:
         - Key: Name
           Value: MonoToMicroDB
+
   UIBucket:
     Type: AWS::S3::Bucket
     Properties:
       WebsiteConfiguration:
         ErrorDocument: error.html
         IndexDocument: index.html
+
   AssetBucket:
     Type: AWS::S3::Bucket
+
   EC2Instance:
     Type: AWS::EC2::Instance
     DependsOn: DBInstance
@@ -262,10 +267,10 @@ Resources:
             0-clone-repo:
               command: 
                 !Sub |
-                  git clone
-                  --depth 1
-                  --branch ${MonolithBranch}
-                  ${MonolithRepository}
+                  git clone \
+                  --depth 1 \
+                  --branch ${MonolithBranch} \
+                  ${MonolithRepository} \
                   /home/ec2-user/MonoToMicro
             1-create-tables:
               command: !Join 
@@ -321,6 +326,8 @@ Resources:
                     chmod -R 755 /home
                   - >
                     sed -i'' -e 's|/usr/share/nginx/html|/home/ec2-user/MonoToMicro/MonoToMicroUI|g' /etc/nginx/nginx.conf
+                  - >
+                    echo 'location /api/ { proxy_pass http://127.0.0.1:8080/; }' > /etc/nginx/default.d/001-api.conf
                   - >
                     systemctl start nginx
             5-populate-buckets:
