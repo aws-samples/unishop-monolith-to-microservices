@@ -581,7 +581,7 @@ Resources:
   ApplicationAssetBucketSSMParam:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: LambdaAssetBucketName
+      Name: ApplicationAssetBucketName
       Type: String
       Value: !Ref AssetBucket
 
