@@ -556,7 +556,7 @@ Resources:
       Name: UniShopPublicDnsName
       Value: !Join 
         - /
-        - - 'http:/'
+        - - 'http://'
           - !GetAtt 
             - EC2Instance
             - PublicDnsName
@@ -572,6 +572,13 @@ Resources:
       Description: Monolith VPC ID
 
   LambdaAssetBucketSSMParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: LambdaAssetBucketName
+      Type: String
+      Value: !Ref AssetBucket
+
+  ApplicationAssetBucketSSMParam:
     Type: AWS::SSM::Parameter
     Properties:
       Name: LambdaAssetBucketName
