@@ -352,6 +352,10 @@ Resources:
                     aws s3 cp
                     /home/ec2-user/MonoToMicro/MonoToMicroLambda/build/libs
                     s3://$ASSETS_RANDOM_NAME/ --recursive
+                  - >
+                    aws s3 cp
+                    /home/ec2-user/MonoToMicro/MonoToMicroLegacy/build/libs
+                    s3://$ASSETS_RANDOM_NAME/ --recursive
         create-service-files:
           files:
             /etc/systemd/system/mono2micro.service:
@@ -556,7 +560,7 @@ Resources:
       Name: UniShopPublicDnsName
       Value: !Join 
         - /
-        - - 'http://'
+        - - 'http:/'
           - !GetAtt 
             - EC2Instance
             - PublicDnsName
@@ -586,23 +590,19 @@ Resources:
       Value: !Ref AssetBucket
 
 Outputs:
-  PublicDns:
+  WebsiteURL:
     Value: !GetAtt 
       - PublicDnsNameSSMParam
       - Value
-    Description: Server Public DNS
+    Description: Unicorn Shop WebSite URL
   VpcId:
     Value: !GetAtt 
       - VpcIdSSMParam
       - Value
+    Description: VPC where the monolith is running
   AssetBucket:
     Value: !Ref AssetBucket
-    Description: S3 Bucket containing the compiled Lambda function
+    Description: S3 Bucket containing the compiled Java code
   UIBucket:
     Value: !Ref UIBucket
     Description: S3 Bucket containing the UniShop website
-  WebsiteURL:
-    Value: !GetAtt 
-      - UIBucket
-      - WebsiteURL
-    Description: URL for UniShop website hosted on S3
