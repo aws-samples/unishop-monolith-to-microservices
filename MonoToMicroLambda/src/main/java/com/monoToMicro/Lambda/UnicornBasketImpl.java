@@ -57,111 +57,51 @@ public class UnicornBasketImpl implements RequestHandler<UnicornBasket, String> 
   }
 
   @Override
-  public String handleRequest(UnicornBasket unicornBasket, Context context) {
-    return "Unicorn Lives Matter";
-  }
+  public String handleRequest(UnicornBasket unicornBasket, Context context)  {
+    try {
+      final DynamoDbAsyncTable<UnicornBasket> unicornBasketTable = client.table(
+        UNICORN_TABLE_NAME, TableSchema.fromBean(UnicornBasket.class));
 
-  public String addUnicornToBasket(UnicornBasket unicornBasket, Context context)
-    throws ExecutionException, InterruptedException {
-    final DynamoDbAsyncTable<UnicornBasket> unicornBasketTable = client.table(
-      UNICORN_TABLE_NAME, TableSchema.fromBean(UnicornBasket.class));
+      //Get current basket
+      UnicornBasket currentBasket = unicornBasketTable.getItem(r ->
+        r.key(Key.builder().partitionValue(unicornBasket.getUuid()).build())).get();
 
-    //Get current basket
-    UnicornBasket currentBasket = unicornBasketTable.getItem(r ->
-      r.key(Key.builder().partitionValue(unicornBasket.getUuid()).build())).get();
-
-    //if there is no current basket then use the incoming basket as the new basket
-    if (currentBasket == null) {
-      if (unicornBasket.getUuid() != null && unicornBasket.getUnicorns() != null) {
-        unicornBasketTable.putItem(unicornBasket);
-        return "Added Unicorn to basket";
-      }
-      return "No basket exist and none was created";
-    }
-
-    //basket already exist, will check if item exist and add if not found
-    List<Unicorn> currentUnicorns = currentBasket.getUnicorns();
-    List<Unicorn> unicornsToAdd = unicornBasket.getUnicorns();
-
-    //Assuming only one will be added but checking for null or empty values
-    if (unicornsToAdd != null && !unicornsToAdd.isEmpty()) {
-      Unicorn unicornToAdd = unicornsToAdd.get(0);
-      String unicornToAddUuid = unicornToAdd.getUuid();
-
-      for (Unicorn currentUnicorn : currentUnicorns) {
-        if (currentUnicorn.getUuid().equals(unicornToAddUuid)) {
-          //The unicorn already exists, no need to add him.
-          return "Unicorn already exists!";
+      //If there is no current basket then use the incoming basket as the new basket
+      if (currentBasket == null) {
+        if (unicornBasket.getUuid() != null && unicornBasket.getUnicorns() != null) {
+          unicornBasketTable.putItem(unicornBasket);
+          return "Added Unicorn to basket";
         }
+        return "No basket exist and none was created";
       }
 
-      //Unicorn was not found, need to add and save
-      currentUnicorns.add(unicornToAdd);
-      currentBasket.setUnicorns(currentUnicorns);
-      unicornBasketTable.putItem(currentBasket);
-      return "Added Unicorn to basket";
-    }
-    return "Are you sure you added a Unicorn?";
-  }
+      //Basket already exist, will check if item exist and add if not found
+      List<Unicorn> currentUnicorns = currentBasket.getUnicorns();
+      List<Unicorn> unicornsToAdd = unicornBasket.getUnicorns();
 
-  public String removeUnicornFromBasket(UnicornBasket unicornBasket, Context context)
-    throws ExecutionException, InterruptedException {
-    final DynamoDbAsyncTable<UnicornBasket> unicornBasketTable = client.table(
-      UNICORN_TABLE_NAME, TableSchema.fromBean(UnicornBasket.class));
+      //Assuming only one will be added but checking for null or empty values
+      if (unicornsToAdd != null && !unicornsToAdd.isEmpty()) {
+        Unicorn unicornToAdd = unicornsToAdd.get(0);
+        String unicornToAddUuid = unicornToAdd.getUuid();
 
-    //Get current basket
-    UnicornBasket currentBasket = unicornBasketTable.getItem(r ->
-      r.key(Key.builder().partitionValue(unicornBasket.getUuid()).build())).get();
-
-    //if no basket exist then return an error
-    if (currentBasket == null) {
-      return "No basket exist, nothing to delete";
-    }
-
-    //basket exist, will check if item exist and will remove
-    List<Unicorn> currentUnicorns = currentBasket.getUnicorns();
-    List<Unicorn> unicornsToRemove = unicornBasket.getUnicorns();
-
-    //Assuming only one will be removed but checking for null or empty values
-    if (unicornsToRemove != null && !unicornsToRemove.isEmpty()) {
-      Unicorn unicornToRemove = unicornsToRemove.get(0);
-      String unicornToRemoveUuid = unicornToRemove.getUuid();
-
-      for (Unicorn currentUnicorn : currentUnicorns) {
-        if (currentUnicorn.getUuid().equals(unicornToRemoveUuid)) {
-          currentUnicorns.remove(currentUnicorn);
-          if (currentUnicorns.isEmpty()) {
-            //no more unicorns in basket, will delete the basket
-            unicornBasketTable.deleteItem(currentBasket);
-            return "Unicorn was removed and basket was deleted!";
-          } else {
-            //keeping basket alive as more unicorns are in it
-            currentBasket.setUnicorns(currentUnicorns);
-            unicornBasketTable.putItem(currentBasket);
-            return "Unicorn was removed! Other unicorns are still in basket";
+        for (Unicorn currentUnicorn : currentUnicorns) {
+          if (currentUnicorn.getUuid().equals(unicornToAddUuid)) {
+            //The unicorn already exists, no need to add him.
+            return "Unicorn already exists!";
           }
         }
-      }
 
-      if (currentBasket.getUnicorns() != null && currentBasket.getUnicorns().isEmpty()) {
-        //no unicorn to remove, will try to remove the basket nonetheless
-        unicornBasketTable.deleteItem(currentBasket);
+        //Unicorn was not found, need to add and save
+        currentUnicorns.add(unicornToAdd);
+        currentBasket.setUnicorns(currentUnicorns);
+        unicornBasketTable.putItem(currentBasket);
+        return "Added Unicorn to basket";
       }
-      return "Didn't find a unicorn to remove";
+      return "Are you sure you added a Unicorn?";
+    }catch (ExecutionException | InterruptedException ex){
+      throw new RuntimeException(ex);
     }
-    return "Are you sure you asked to remove a Unicorn?";
   }
 
-  public UnicornBasket getUnicornsBasket(UnicornBasket unicornBasket, Context context)
-    throws ExecutionException, InterruptedException {
-    final DynamoDbAsyncTable<UnicornBasket> unicornBasketTable = client.table(
-      UNICORN_TABLE_NAME, TableSchema.fromBean(UnicornBasket.class));
 
-    if (!StringUtils.isEmpty(unicornBasket.getUuid())) {
-      return unicornBasketTable.getItem(r ->
-        r.key(Key.builder().partitionValue(unicornBasket.getUuid()).build())).get();
-    }
-
-    return null;
-  }
 }
