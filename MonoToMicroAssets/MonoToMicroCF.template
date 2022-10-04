@@ -394,8 +394,17 @@
                                     "./gradlew clean shadowJar\n"
                                 ]]}
                             },
-                            "4-modify-configuration" : { "command" :
-                                "sed -i \"s/:\\/\\/.*\\\"/:\\/\\/$(curl -s http://169.254.169.254/latest/meta-data/public-hostname)\\\"/g\" /home/ec2-user/MonoToMicro/MonoToMicroUI/config.json"
+                            "4-install-nginx": { "command" :
+                                { "Fn::Join" : [ "",[
+                                    "amazon-linux-extras enable epel\n",
+                                    "yum install -y epel-release\n",
+                                    "yum install -y nginx\n",
+                                    "systemctl enable nginx\n",
+                                    "chown -R nginx:nginx /home/ec2-user/MonoToMicro/MonoToMicroUI\n",
+                                    "chmod -R 755 /home\n",
+                                    "sed -i'' -e 's|/usr/share/nginx/html|/home/ec2-user/MonoToMicro/MonoToMicroUI|g' /etc/nginx/nginx.conf\n",
+                                    "systemctl start nginx\n"
+                                ]]}
                             },
                             "5-populate-buckets" : { "command" :
                                     { "Fn::Join" : [ "",[
@@ -408,8 +417,8 @@
                                         "ASSETS_RANDOM_NAME=", {
                                             "Ref": "AssetBucket"
                                         }, "\n",
-                                        "aws s3 cp /home/ec2-user/MonoToMicro/MonoToMicroUI s3://$UI_RANDOM_NAME/ --recursive --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers\n",
-                                        "aws s3 cp /home/ec2-user/MonoToMicro/MonoToMicroLambda/build/libs s3://$ASSETS_RANDOM_NAME/ --recursive --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers\n"
+                                        "aws s3 cp /home/ec2-user/MonoToMicro/MonoToMicroUI s3://$UI_RANDOM_NAME/ --recursive\n",
+                                        "aws s3 cp /home/ec2-user/MonoToMicro/MonoToMicroLambda/build/libs s3://$ASSETS_RANDOM_NAME/ --recursive\n"
                                     ]]}
                             }
                         }

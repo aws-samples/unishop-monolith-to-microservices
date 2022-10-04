@@ -5,6 +5,14 @@ Parameters:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
     Description: Use an AMI of your choosing, we recommend to use the latest available
+  MonolithRepository:
+    Type: String
+    Default: https://github.com/fabbazon/unishop-monolith-to-microservices.git
+    Description: The repo to clone for the Monolith Legacy Application
+  MonolithBranch:
+    Type: String
+    Default: reinvent-2022
+    Description: The repo branch to use for the Monolith Legacy Application
 Resources:
   MonoToMicroVPC:
     Type: AWS::EC2::VPC
@@ -175,6 +183,7 @@ Resources:
                   - /*
       Roles:
         - !Ref S3Role
+
   S3Role:
     Type: AWS::IAM::Role
     Properties:
@@ -192,6 +201,7 @@ Resources:
         - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
         - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
       Path: /
+
   DBInstance:
     Type: AWS::RDS::DBInstance
     DeletionPolicy: Delete
@@ -211,14 +221,17 @@ Resources:
       Tags:
         - Key: Name
           Value: MonoToMicroDB
+
   UIBucket:
     Type: AWS::S3::Bucket
     Properties:
       WebsiteConfiguration:
         ErrorDocument: error.html
         IndexDocument: index.html
+
   AssetBucket:
     Type: AWS::S3::Bucket
+
   EC2Instance:
     Type: AWS::EC2::Instance
     DependsOn: DBInstance
@@ -252,10 +265,13 @@ Resources:
         configure:
           commands:
             0-clone-repo:
-              command: >-
-                git clone
-                https://github.com/aws-samples/unishop-monolith-to-microservices.git
-                /home/ec2-user/MonoToMicro
+              command: 
+                !Sub |
+                  git clone \
+                  --depth 1 \
+                  --branch ${MonolithBranch} \
+                  ${MonolithRepository} \
+                  /home/ec2-user/MonoToMicro
             1-create-tables:
               command: !Join 
                 - ''
@@ -293,11 +309,27 @@ Resources:
                     cd /home/ec2-user/MonoToMicro/MonoToMicroLambda
                   - |
                     ./gradlew clean shadowJar
-            4-modify-configuration:
-              command: >-
-                sed -i "s/:\/\/.*\"/:\/\/$(curl -s
-                http://169.254.169.254/latest/meta-data/public-hostname)\"/g"
-                /home/ec2-user/MonoToMicro/MonoToMicroUI/config.json
+            4-install-nginx:
+              command: !Join 
+                - ''
+                - - |
+                    amazon-linux-extras enable epel
+                  - >
+                    yum install -y epel-release
+                  - >
+                    yum install -y nginx
+                  - >
+                    systemctl enable nginx
+                  - >
+                    chown -R nginx:nginx /home/ec2-user/MonoToMicro/MonoToMicroUI
+                  - >
+                    chmod -R 755 /home
+                  - >
+                    sed -i'' -e 's|/usr/share/nginx/html|/home/ec2-user/MonoToMicro/MonoToMicroUI|g' /etc/nginx/nginx.conf
+                  - >
+                    echo 'location /api/ { proxy_pass http://127.0.0.1:8080/; }' > /etc/nginx/default.d/001-api.conf
+                  - >
+                    systemctl start nginx
             5-populate-buckets:
               command: !Join 
                 - ''
@@ -315,13 +347,15 @@ Resources:
 
                   - >
                     aws s3 cp /home/ec2-user/MonoToMicro/MonoToMicroUI
-                    s3://$UI_RANDOM_NAME/ --recursive --grants
-                    read=uri=http://acs.amazonaws.com/groups/global/AllUsers
+                    s3://$UI_RANDOM_NAME/ --recursive
                   - >
                     aws s3 cp
                     /home/ec2-user/MonoToMicro/MonoToMicroLambda/build/libs
-                    s3://$ASSETS_RANDOM_NAME/ --recursive --grants
-                    read=uri=http://acs.amazonaws.com/groups/global/AllUsers
+                    s3://$ASSETS_RANDOM_NAME/ --recursive
+                  - >
+                    aws s3 cp
+                    /home/ec2-user/MonoToMicro/MonoToMicroLegacy/build/libs
+                    s3://$ASSETS_RANDOM_NAME/ --recursive
         create-service-files:
           files:
             /etc/systemd/system/mono2micro.service:
@@ -548,24 +582,27 @@ Resources:
       Type: String
       Value: !Ref AssetBucket
 
+  ApplicationAssetBucketSSMParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: ApplicationAssetBucketName
+      Type: String
+      Value: !Ref AssetBucket
+
 Outputs:
-  PublicDns:
+  WebsiteURL:
     Value: !GetAtt 
       - PublicDnsNameSSMParam
       - Value
-    Description: Server Public DNS
+    Description: Unicorn Shop WebSite URL
   VpcId:
     Value: !GetAtt 
       - VpcIdSSMParam
       - Value
+    Description: VPC where the monolith is running
   AssetBucket:
     Value: !Ref AssetBucket
-    Description: S3 Bucket containing the compiled Lambda function
+    Description: S3 Bucket containing the compiled Java code
   UIBucket:
     Value: !Ref UIBucket
     Description: S3 Bucket containing the UniShop website
-  WebsiteURL:
-    Value: !GetAtt 
-      - UIBucket
-      - WebsiteURL
-    Description: URL for UniShop website hosted on S3
