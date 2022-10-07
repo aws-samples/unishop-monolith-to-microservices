@@ -29,13 +29,12 @@ import software.amazon.awssdk.http.crt.AwsCrtAsyncHttpClient;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
-import software.amazon.awssdk.utils.StringUtils;
 
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
-public class UnicornBasketImpl implements RequestHandler<UnicornBasket, String> {
-  private static final String UNICORN_TABLE_NAME = "unishop";
+public class UnicornProfileImpl implements RequestHandler<UnicornProfile, String> {
+  private static final String UNICORN_TABLE_NAME = "unishop-profile";
   private static final DynamoDbAsyncClient ddb = DynamoDbAsyncClient.builder()
     .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
     .httpClientBuilder(AwsCrtAsyncHttpClient.builder().maxConcurrency(50))
@@ -47,61 +46,44 @@ public class UnicornBasketImpl implements RequestHandler<UnicornBasket, String> 
 
   static {
     try {
-      final DynamoDbAsyncTable<UnicornBasket> unicornBasketTable = client.table(
-        UNICORN_TABLE_NAME, TableSchema.fromBean(UnicornBasket.class));
+      final DynamoDbAsyncTable<UnicornProfile> table = client.table(
+        UNICORN_TABLE_NAME, TableSchema.fromBean(UnicornProfile.class));
 
-      unicornBasketTable.describeTable().get();
+      table.describeTable().get();
     } catch (DynamoDbException | ExecutionException | InterruptedException e) {
       System.out.println(e.getMessage());
     }
   }
 
   @Override
-  public String handleRequest(UnicornBasket unicornBasket, Context context)  {
+  public String handleRequest(UnicornProfile profile, Context context)  {
     try {
-      final DynamoDbAsyncTable<UnicornBasket> unicornBasketTable = client.table(
-        UNICORN_TABLE_NAME, TableSchema.fromBean(UnicornBasket.class));
+      final DynamoDbAsyncTable<UnicornProfile> unicornProfileTable = client.table(
+        UNICORN_TABLE_NAME, TableSchema.fromBean(UnicornProfile.class));
 
-      //Get current basket
-      UnicornBasket currentBasket = unicornBasketTable.getItem(r ->
-        r.key(Key.builder().partitionValue(unicornBasket.getUuid()).build())).get();
+      //Get current profile
+      UnicornProfile currentProfile = unicornProfileTable.getItem(r ->
+        r.key(Key.builder().partitionValue(profile.getUuid()).build())).get();
 
-      //If there is no current basket then use the incoming basket as the new basket
-      if (currentBasket == null) {
-        if (unicornBasket.getUuid() != null && unicornBasket.getUnicorns() != null) {
-          unicornBasketTable.putItem(unicornBasket);
-          return "Added Unicorn to basket";
+      //If there is no current profile then use the incoming profile as new profile
+      if (currentProfile == null) {
+        if (profile.getUuid() != null) {
+          unicornProfileTable.putItem(profile);
+          return "Created new profile";
         }
-        return "No basket exist and none was created";
+        return "Missing uuid";
       }
 
-      //Basket already exist, will check if item exist and add if not found
-      List<Unicorn> currentUnicorns = currentBasket.getUnicorns();
-      List<Unicorn> unicornsToAdd = unicornBasket.getUnicorns();
+      //Profile already exist, lets update the values
+      currentProfile.setName(profile.getName());
+      currentProfile.setEmail(profile.getEmail());
 
-      //Assuming only one will be added but checking for null or empty values
-      if (unicornsToAdd != null && !unicornsToAdd.isEmpty()) {
-        Unicorn unicornToAdd = unicornsToAdd.get(0);
-        String unicornToAddUuid = unicornToAdd.getUuid();
+      //Update the item in DynamoDB
+      unicornProfileTable.updateItem(currentProfile);
 
-        for (Unicorn currentUnicorn : currentUnicorns) {
-          if (currentUnicorn.getUuid().equals(unicornToAddUuid)) {
-            //The unicorn already exists, no need to add him.
-            return "Unicorn already exists!";
-          }
-        }
-
-        //Unicorn was not found, need to add and save
-        currentUnicorns.add(unicornToAdd);
-        currentBasket.setUnicorns(currentUnicorns);
-        unicornBasketTable.putItem(currentBasket);
-        return "Added Unicorn to basket";
-      }
-      return "Are you sure you added a Unicorn?";
+      return "Profile updated!";
     }catch (ExecutionException | InterruptedException ex){
       throw new RuntimeException(ex);
     }
   }
-
-
 }
