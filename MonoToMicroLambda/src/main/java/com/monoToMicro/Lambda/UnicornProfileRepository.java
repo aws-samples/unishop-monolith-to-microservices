@@ -1,25 +1,5 @@
-/**
- * Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
- * <p>
- * <p>
- * Permission is hereby granted, free of charge, to any person obtaining a copy of this
- * software and associated documentation files (the "Software"), to deal in the Software
- * without restriction, including without limitation the rights to use, copy, modify,
- * merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
- * permit persons to whom the Software is furnished to do so.
- * <p>
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
- * INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
- * PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
- * HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
- * OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
- * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
-
 package com.monoToMicro.Lambda;
 
-import com.amazonaws.services.lambda.runtime.Context;
-import com.amazonaws.services.lambda.runtime.RequestHandler;
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
@@ -30,10 +10,13 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 
-import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
-public class UnicornProfileImpl implements RequestHandler<UnicornProfile, String> {
+public class UnicornProfileRepository {
+
+  public static final String PROFILE_ID_COOKIE = "unishopUserId";
+
   private static final String UNICORN_TABLE_NAME = "unishop-profile";
   private static final DynamoDbAsyncClient ddb = DynamoDbAsyncClient.builder()
     .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
@@ -55,11 +38,35 @@ public class UnicornProfileImpl implements RequestHandler<UnicornProfile, String
     }
   }
 
-  @Override
-  public String handleRequest(UnicornProfile profile, Context context)  {
+  private final DynamoDbAsyncTable<UnicornProfile> unicornProfileTable = client.table(
+    UNICORN_TABLE_NAME, TableSchema.fromBean(UnicornProfile.class));
+
+
+  public UnicornProfile getOrCreate(String uuid){
+    //If we have no uuid, create a new profile and store it
+    if(uuid == null){
+      UnicornProfile profile = new UnicornProfile(UUID.randomUUID().toString());
+      unicornProfileTable.putItem(profile);
+      return profile;
+    }
+
+    //get the existing profile
     try {
-      final DynamoDbAsyncTable<UnicornProfile> unicornProfileTable = client.table(
-        UNICORN_TABLE_NAME, TableSchema.fromBean(UnicornProfile.class));
+      UnicornProfile currentProfile = unicornProfileTable.getItem(r ->
+        r.key(Key.builder().partitionValue(uuid).build())).get();
+
+      if(currentProfile == null){
+        throw new IllegalArgumentException(String.format("Found no profile with id%s", uuid));
+      }
+
+      return currentProfile;
+    }catch(ExecutionException | InterruptedException ex){
+      throw new RuntimeException(ex);
+    }
+  }
+
+  public UnicornProfile update(UnicornProfile profile){
+    try {
 
       //Get current profile
       UnicornProfile currentProfile = unicornProfileTable.getItem(r ->
@@ -67,11 +74,7 @@ public class UnicornProfileImpl implements RequestHandler<UnicornProfile, String
 
       //If there is no current profile then use the incoming profile as new profile
       if (currentProfile == null) {
-        if (profile.getUuid() != null) {
-          unicornProfileTable.putItem(profile);
-          return "Created new profile";
-        }
-        return "Missing uuid";
+        throw new IllegalArgumentException(String.format("Found no profile with id%s", profile.getUuid()));
       }
 
       //Profile already exist, lets update the values
@@ -81,7 +84,7 @@ public class UnicornProfileImpl implements RequestHandler<UnicornProfile, String
       //Update the item in DynamoDB
       unicornProfileTable.updateItem(currentProfile);
 
-      return "Profile updated!";
+      return profile;
     }catch (ExecutionException | InterruptedException ex){
       throw new RuntimeException(ex);
     }
