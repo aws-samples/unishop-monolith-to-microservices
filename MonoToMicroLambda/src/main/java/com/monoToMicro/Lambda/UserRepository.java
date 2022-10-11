@@ -40,6 +40,7 @@ public class UserRepository {
 
 
   public User getOrCreate(User user){
+
     //If we have no uuid, create a new profile and store it
     if(user.getUuid() == null){
       user.setUuid(UUID.randomUUID().toString());

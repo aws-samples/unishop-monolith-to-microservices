@@ -34,7 +34,7 @@ public class LoginHandler implements RequestHandler<APIGatewayProxyRequestEvent,
     APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
 
     try{
-      User userRequest = gson.fromJson(response.getBody(),User.class);
+      User userRequest = gson.fromJson(event.getBody(),User.class);
       User profile = repository.getByEmail(userRequest.getEmail());
       response
         .withBody(gson.toJson(profile))

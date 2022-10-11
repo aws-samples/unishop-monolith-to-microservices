@@ -34,7 +34,7 @@ public class CreateHandler implements RequestHandler<APIGatewayProxyRequestEvent
     APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
 
     try{
-      User userRequest = gson.fromJson(response.getBody(),User.class);
+      User userRequest = gson.fromJson(event.getBody(),User.class);
       User profile = repository.getOrCreate(userRequest);
       response
         .withBody(gson.toJson(profile))
