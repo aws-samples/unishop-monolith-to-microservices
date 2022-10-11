@@ -24,27 +24,18 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.google.gson.Gson;
 
-import java.util.Map;
+public class CreateHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-import static com.monoToMicro.Lambda.UnicornProfileRepository.PROFILE_ID_COOKIE;
-
-public class UpdateUnicornProfile implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
-
-  private final UnicornProfileRepository repository = new UnicornProfileRepository();
+  private final UserRepository repository = new UserRepository();
   private final Gson gson = new Gson();
 
   @Override
   public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent event, Context context)  {
-
     APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
 
     try{
-      String uuid = Util.getCookie(event,PROFILE_ID_COOKIE);
-      UnicornProfile profile = gson.fromJson(event.getBody(),UnicornProfile.class);
-      profile.setUuid(uuid);
-
-      repository.update(profile);
-
+      User userRequest = gson.fromJson(response.getBody(),User.class);
+      User profile = repository.getOrCreate(userRequest);
       response
         .withBody(gson.toJson(profile))
         .withStatusCode(200);
@@ -52,9 +43,10 @@ public class UpdateUnicornProfile implements RequestHandler<APIGatewayProxyReque
       exception.printStackTrace();
 
       response
-        .withBody("An error occurred while updaeting the profile")
+        .withBody("An error occurred while fetching the user")
         .withStatusCode(400);
     }
+
     return response;
   }
 }

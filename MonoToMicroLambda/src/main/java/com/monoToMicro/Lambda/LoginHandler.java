@@ -24,36 +24,29 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.google.gson.Gson;
 
-import java.util.Map;
+public class LoginHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
-import static com.monoToMicro.Lambda.UnicornProfileRepository.PROFILE_ID_COOKIE;
-
-public class GetUnicornProfile implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
-
-  private final UnicornProfileRepository repository = new UnicornProfileRepository();
+  private final UserRepository repository = new UserRepository();
   private final Gson gson = new Gson();
 
   @Override
   public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent event, Context context)  {
-
     APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
 
     try{
-      String uuid = Util.getCookie(event,PROFILE_ID_COOKIE);
-
-      UnicornProfile profile = repository.getOrCreate(uuid);
-
+      User userRequest = gson.fromJson(response.getBody(),User.class);
+      User profile = repository.getByEmail(userRequest.getEmail());
       response
         .withBody(gson.toJson(profile))
-        .withStatusCode(200)
-        .withHeaders(Map.of("Set-Cookie", String.format("%s=%s; Secure", PROFILE_ID_COOKIE, profile.getUuid())));
+        .withStatusCode(200);
     }catch (Exception exception){
       exception.printStackTrace();
 
       response
-        .withBody("An error occurred while fetching the profile")
+        .withBody("An error occurred while fetching the user")
         .withStatusCode(400);
     }
+
     return response;
   }
 }

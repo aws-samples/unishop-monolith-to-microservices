@@ -22,15 +22,16 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 
 @DynamoDbBean
-public class UnicornProfile {
+public class User {
   private String uuid = null;
-  private String name = null;
+  private String firstName = null;
+  private String lastName = null;
   private String email = null;
 
-  public UnicornProfile() {
+  public User() {
   }
 
-  public UnicornProfile(String uuid) {
+  public User(String uuid) {
     this.uuid = uuid;
   }
 
@@ -43,13 +44,22 @@ public class UnicornProfile {
     this.uuid = uuid;
   }
 
-  @DynamoDbAttribute(value = "name")
-  public String getName() {
-    return name;
+  @DynamoDbAttribute(value = "firstName")
+  public String getFirstName() {
+    return firstName;
   }
 
-  public void setName(String name) {
-    this.name = name;
+  public void setFirstName(String firstName) {
+    this.firstName = firstName;
+  }
+
+  @DynamoDbAttribute(value = "lastName")
+  public String getLastName() {
+    return lastName;
+  }
+
+  public void setLastName(String lastName) {
+    this.lastName = lastName;
   }
 
   @DynamoDbAttribute(value = "email")
