@@ -21,17 +21,17 @@ import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbAttri
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbBean;
 import software.amazon.awssdk.enhanced.dynamodb.mapper.annotations.DynamoDbPartitionKey;
 
-import java.util.List;
-
 @DynamoDbBean
-public class UnicornBasket {
+public class User {
   private String uuid = null;
-  private List<Unicorn> unicorns = null;
+  private String firstName = null;
+  private String lastName = null;
+  private String email = null;
 
-  public UnicornBasket() {
+  public User() {
   }
 
-  public UnicornBasket(String uuid) {
+  public User(String uuid) {
     this.uuid = uuid;
   }
 
@@ -44,12 +44,30 @@ public class UnicornBasket {
     this.uuid = uuid;
   }
 
-  @DynamoDbAttribute(value = "unicorns")
-  public List<Unicorn> getUnicorns() {
-    return unicorns;
+  @DynamoDbAttribute(value = "firstName")
+  public String getFirstName() {
+    return firstName;
   }
 
-  public void setUnicorns(List<Unicorn> unicorns) {
-    this.unicorns = unicorns;
+  public void setFirstName(String firstName) {
+    this.firstName = firstName;
+  }
+
+  @DynamoDbAttribute(value = "lastName")
+  public String getLastName() {
+    return lastName;
+  }
+
+  public void setLastName(String lastName) {
+    this.lastName = lastName;
+  }
+
+  @DynamoDbAttribute(value = "email")
+  public String getEmail() {
+    return email;
+  }
+
+  public void setEmail(String email) {
+    this.email = email;
   }
 }

@@ -4,7 +4,7 @@ Resources:
   DynamoDBTable:
     Type: AWS::DynamoDB::Table
     Properties:
-      TableName: unishop
+      TableName: unishop-users
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
         - AttributeName: uuid
