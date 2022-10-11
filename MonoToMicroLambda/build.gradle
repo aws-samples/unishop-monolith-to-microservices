@@ -31,3 +31,7 @@ dependencies {
 shadowJar {
   archiveClassifier.set('')
 }
+
+build{
+  finalizedBy("shadowJar")
+}
