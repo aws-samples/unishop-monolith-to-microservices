@@ -21,6 +21,10 @@ package com.monoToMicro;
 import org.springframework.boot.SpringApplication;
 
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.web.builders.WebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -42,4 +46,12 @@ public class Application {
         };
     }
 
+    @Configuration
+    public static class CorsOptionsRequestSecurityConfigurationAdapter extends WebSecurityConfigurerAdapter {
+        @Override
+        public void configure(WebSecurity web) throws Exception {
+            web.ignoring().antMatchers(HttpMethod.OPTIONS, "/**"); //workaround to get CORS working with this old version, not recommended for production usage!
+        }
+
+    }
 }
