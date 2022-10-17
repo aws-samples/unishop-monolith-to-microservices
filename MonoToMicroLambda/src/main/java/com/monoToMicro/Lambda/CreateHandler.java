@@ -24,6 +24,8 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 import com.google.gson.Gson;
 
+import java.util.Map;
+
 public class CreateHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
   private final UserRepository repository = new UserRepository();
@@ -37,6 +39,7 @@ public class CreateHandler implements RequestHandler<APIGatewayProxyRequestEvent
       User userRequest = gson.fromJson(event.getBody(),User.class);
       User profile = repository.getOrCreate(userRequest);
       response
+        .withHeaders(Map.of("Access-Control-Allow-Origin","*"))
         .withBody(gson.toJson(profile))
         .withStatusCode(200);
     }catch (Exception exception){
