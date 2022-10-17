@@ -25,3 +25,4 @@ build/
 *.rar
 *.tar
 *.zip
+!gradle-wrapper.jar
