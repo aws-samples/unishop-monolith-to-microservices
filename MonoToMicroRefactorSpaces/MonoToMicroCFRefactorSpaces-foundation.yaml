@@ -15,7 +15,7 @@ Resources:
     Type: AWS::RefactorSpaces::Environment
     Properties:
       Name: unistore-dev
-      NetworkFabricType: TRANSIT_GATEWAY
+      NetworkFabricType: NONE
       Description: A Refactor Spaces environment for the Unicorn store
 
   UniShopRefactorSpacesApplication:
