@@ -393,13 +393,7 @@
                                     <div class="divider-custom-line"></div>
                                 </div>
                                 <form name="sentMessage" novalidate="novalidate">
-                                    <div class="control-group">
-                                        <div class="form-group floating-label-form-group controls mb-0 pb-2">
-                                            <label>Name</label>
-                                            <input class="form-control" id="login_name" ng-model="login_name" type="text" placeholder="Name" required="required" data-validation-required-message="Please enter your name.">
-                                            <p class="help-block text-danger"></p>
-                                        </div>
-                                    </div>
+
                                     <div class="control-group">
                                         <div class="form-group floating-label-form-group controls mb-0 pb-2">
                                             <label>Email Address</label>
@@ -466,11 +460,18 @@
                                 <form name="sentMessage" novalidate="novalidate">
                                     <div class="control-group">
                                         <div class="form-group floating-label-form-group controls mb-0 pb-2">
-                                            <label>Name</label>
-                                            <input class="form-control" id="signup_name" ng-model="signup_name" type="text" placeholder="Name" required="required" data-validation-required-message="Please enter your name.">
+                                            <label>First name</label>
+                                            <input class="form-control" id="signup_firstname" ng-model="signup_firstname" type="text" placeholder="First name" required="required" data-validation-required-message="Please enter your first name.">
                                             <p class="help-block text-danger"></p>
                                         </div>
                                     </div>
+                                    <div class="control-group">
+                                        <div class="form-group floating-label-form-group controls mb-0 pb-2">
+                                            <label>Last name</label>
+                                            <input class="form-control" id="signup_lastname" ng-model="signup_lastname" type="text" placeholder="Last name" required="required" data-validation-required-message="Please enter your last name.">
+                                            <p class="help-block text-danger"></p>
+                                        </div>
+                                    </div>   
                                     <div class="control-group">
                                         <div class="form-group floating-label-form-group controls mb-0 pb-2">
                                             <label>Email</label>

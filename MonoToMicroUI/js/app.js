@@ -100,7 +100,8 @@ var myApp = angular.module('unicorn_app', ['ngRoute', 'ngResource']).controller(
     $scope.login_name = "";
     $scope.signup_email = "";
     $scope.signup_password = "";
-    $scope.signup_name = "";
+    $scope.signup_firstname = "";
+    $scope.signup_lastname = "";
 
     $scope.carts = [];
 
@@ -164,7 +165,7 @@ var myApp = angular.module('unicorn_app', ['ngRoute', 'ngResource']).controller(
     });
 
     $('#signup_button').click(function() {
-        $scope.signup($scope.signup_email).then(function() {
+        $scope.signup($scope.signup_email, $scope.signup_firstname, $scope.signup_lastname).then(function() {
             $('.modal').modal('hide');
             $.notify("Successfully Signed up. You may now login", { className: "success", globalPosition: 'top center' });
         });
@@ -224,7 +225,7 @@ var myApp = angular.module('unicorn_app', ['ngRoute', 'ngResource']).controller(
     };
 
 
-    $scope.signup = function(email) {
+    $scope.signup = function(email, firstName, lastName) {
 
         return new Promise(function(resolve, reject) {
 
@@ -233,7 +234,9 @@ var myApp = angular.module('unicorn_app', ['ngRoute', 'ngResource']).controller(
                 url: $scope.host + "/user",
                 contentType: "application/json",
                 data: JSON.stringify({
-                    "email": email
+                    "email": email,
+                    "firstName": firstName,
+                    "lastName": lastName
                 }),
                 success: function(response) {
                     console.log(response, "User Signed Up"); // server response
