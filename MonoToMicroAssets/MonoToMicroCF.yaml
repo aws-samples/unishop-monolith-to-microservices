@@ -378,7 +378,7 @@ Resources:
   PublicDnsNameSSMParam:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: !Sub ${AWS::StackName}-UniShopPublicDnsName
+      Name: UniShopPublicDnsName
       Value: !Sub 
         - 'http://${Dns}'
         - { Dns: !GetAtt EC2Instance.PublicDnsName}
@@ -388,7 +388,7 @@ Resources:
   VpcIdSSMParam:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: !Sub ${AWS::StackName}-UniShopVpcId
+      Name: UniShopVpcId
       Value: !Ref MonoToMicroVPC
       Type: String
       Description: Monolith VPC ID
@@ -396,7 +396,7 @@ Resources:
   LambdaAssetBucketSSMParam:
     Type: AWS::SSM::Parameter
     Properties:
-      Name: !Sub ${AWS::StackName}-LambdaAssetBucketName
+      Name: LambdaAssetBucketName
       Type: String
       Value: !Ref AssetBucket
 
