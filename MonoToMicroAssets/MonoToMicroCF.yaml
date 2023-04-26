@@ -53,29 +53,29 @@ Resources:
       Tags:
         - Key: Name
           Value: MonoToMicroSubnet2
-  MonoToMicroPublicRoutTable:
+  MonoToMicroPublicRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref MonoToMicroVPC
       Tags:
         - Key: Name
           Value: MonoToMicroPublicRoute
-  MonoToMicroPublicRout:
+  MonoToMicroPublicRoute:
     Type: AWS::EC2::Route
     DependsOn: AttachGateway
     Properties:
-      RouteTableId: !Ref MonoToMicroPublicRoutTable
+      RouteTableId: !Ref MonoToMicroPublicRouteTable
       GatewayId: !Ref MonoToMicroIGW
       DestinationCidrBlock: 0.0.0.0/0
-  MonoToMicroPublicSubnetRoutTableAssoc1:
+  MonoToMicroPublicSubnetRouteTableAssoc1:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      RouteTableId: !Ref MonoToMicroPublicRoutTable
+      RouteTableId: !Ref MonoToMicroPublicRouteTable
       SubnetId: !Ref MonoToMicroSubnet1
-  MonoToMicroPublicSubnetRoutTableAssoc2:
+  MonoToMicroPublicSubnetRouteTableAssoc2:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
-      RouteTableId: !Ref MonoToMicroPublicRoutTable
+      RouteTableId: !Ref MonoToMicroPublicRouteTable
       SubnetId: !Ref MonoToMicroSubnet2
   DBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -144,41 +144,31 @@ Resources:
   S3Policy:
     Type: AWS::IAM::Policy
     Properties:
-      PolicyName: S3Policy
+      PolicyName: !Sub ${AWS::StackName}-S3Policy
       PolicyDocument:
         Statement:
           - Effect: Allow
             Action:
               - s3:GetBucketLocation
               - s3:GetObject
-              - s3:GetObjectAcl
               - s3:PutObject
-              - s3:PutObjectAcl
             Resource:
-              - !GetAtt 
-                - UIBucket
-                - Arn
-              - !GetAtt 
-                - AssetBucket
-                - Arn
+              - !GetAtt UIBucket.Arn
+              - !GetAtt AssetBucket.Arn
               - !Join 
                 - ''
-                - - !GetAtt 
-                    - UIBucket
-                    - Arn
+                - - !GetAtt UIBucket.Arn
                   - /*
               - !Join 
                 - ''
-                - - !GetAtt 
-                    - AssetBucket
-                    - Arn
+                - - !GetAtt AssetBucket.Arn
                   - /*
       Roles:
         - !Ref S3Role
   S3Role:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: MonoToMicroRole
+      RoleName: !Sub ${AWS::StackName}-MonoToMicroRole
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -197,7 +187,7 @@ Resources:
     DeletionPolicy: Delete
     Properties:
       DBName: MonoToMicroDB
-      DBInstanceIdentifier: MonoToMicroDB
+      DBInstanceIdentifier: !Sub ${AWS::StackName}-MonoToMicroDB
       Engine: MySQL
       DBInstanceClass: db.t2.micro
       Port: 3306
@@ -214,14 +204,27 @@ Resources:
   UIBucket:
     Type: AWS::S3::Bucket
     Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicPolicy: false
       WebsiteConfiguration:
         ErrorDocument: error.html
         IndexDocument: index.html
+  UIBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref UIBucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Action: ['s3:GetObject']
+            Effect: Allow
+            Resource: 
+              !Sub 'arn:aws:s3:::${UIBucket}/*'
+            Principal: '*'
   AssetBucket:
     Type: AWS::S3::Bucket
   EC2Instance:
     Type: AWS::EC2::Instance
-    DependsOn: DBInstance
     CreationPolicy:
       ResourceSignal:
         Count: 1
@@ -257,234 +260,102 @@ Resources:
                 https://github.com/aws-samples/unishop-monolith-to-microservices.git
                 /home/ec2-user/MonoToMicro
             1-create-tables:
-              command: !Join 
-                - ''
-                - - 'sudo mysql -u MonoToMicroUser -h '
-                  - !GetAtt 
-                    - DBInstance
-                    - Endpoint.Address
-                  - |2
-                     -P 3306 -pMonoToMicroPassword < /home/ec2-user/MonoToMicro/MonoToMicroLegacy/database/create_tables.sql
+              command: !Sub 
+                - sudo mysql -u MonoToMicroUser -h ${DB} -P 3306 -pMonoToMicroPassword < /home/ec2-user/MonoToMicro/MonoToMicroLegacy/database/create_tables.sql
+                - { DB: !GetAtt 'DBInstance.Endpoint.Address' }       
             2-exportDbEndpoint:
-              command: !Join 
-                - ''
-                - - export MONO_TO_MICRO_DB_ENDPOINT=
-                  - !GetAtt 
-                    - DBInstance
-                    - Endpoint.Address
+              command: !Sub 
+                - export MONO_TO_MICRO_DB_ENDPOINT=${DB}
+                - { DB: !GetAtt 'DBInstance.Endpoint.Address' }
             3-gradle-install-build:
-              command: !Join 
-                - ''
-                - - |
-                    cd /home/ec2-user/
-                  - >
-                    sudo wget
-                    https://services.gradle.org/distributions/gradle-6.9-bin.zip
-                  - >
-                    sudo unzip -d /home/ec2-user/
-                    /home/ec2-user/gradle-6.9-bin.zip
-                  - |
-                    export PATH=$PATH:/home/ec2-user/gradle-6.9/bin
-                  - |
-                    cd /home/ec2-user/MonoToMicro/MonoToMicroLegacy
-                  - |
-                    gradle clean build
-                  - |
-                    cd /home/ec2-user/MonoToMicro/MonoToMicroLambda
-                  - |
-                    ./gradlew clean shadowJar
+              command: |
+                cd /home/ec2-user/
+                sudo wget https://services.gradle.org/distributions/gradle-6.9-bin.zip
+                sudo unzip -d /home/ec2-user/ /home/ec2-user/gradle-6.9-bin.zip
+                export PATH=$PATH:/home/ec2-user/gradle-6.9/bin
+                cd /home/ec2-user/MonoToMicro/MonoToMicroLegacy
+                gradle clean build
+                cd /home/ec2-user/MonoToMicro/MonoToMicroLambda
+                ./gradlew clean shadowJar
             4-modify-configuration:
               command: >-
                 sed -i "s/:\/\/.*\"/:\/\/$(curl -s
                 http://169.254.169.254/latest/meta-data/public-hostname)\"/g"
                 /home/ec2-user/MonoToMicro/MonoToMicroUI/config.json
             5-populate-buckets:
-              command: !Join 
-                - ''
-                - - AWS_DEFAULT_REGION=
-                  - !Ref AWS::Region
-                  - |+
-
-                  - UI_RANDOM_NAME=
-                  - !Ref UIBucket
-                  - |+
-
-                  - ASSETS_RANDOM_NAME=
-                  - !Ref AssetBucket
-                  - |+
-
-                  - >
-                    aws s3 cp /home/ec2-user/MonoToMicro/MonoToMicroUI
-                    s3://$UI_RANDOM_NAME/ --recursive --grants
-                    read=uri=http://acs.amazonaws.com/groups/global/AllUsers
-                  - >
-                    aws s3 cp
-                    /home/ec2-user/MonoToMicro/MonoToMicroLambda/build/libs
-                    s3://$ASSETS_RANDOM_NAME/ --recursive --grants
-                    read=uri=http://acs.amazonaws.com/groups/global/AllUsers
+              command: !Sub | 
+                AWS_DEFAULT_REGION=${AWS::Region}
+                aws s3 cp /home/ec2-user/MonoToMicro/MonoToMicroUI s3://${UIBucket}/ --recursive
+                aws s3 cp /home/ec2-user/MonoToMicro/MonoToMicroLambda/build/libs s3://${AssetBucket}/ --recursive
         create-service-files:
           files:
             /etc/systemd/system/mono2micro.service:
               encoding: plain
-              content: !Join 
-                - ''
-                - - |
-                    [Unit]
-                  - |
-                    Description=Restart Mono2Micro
-                  - |
-                    Wants=network.target
-                  - >
-                    After=syslog.target network-online.target
-                    amazon-cloudwatch-agent.target
-                  - |+
-
-                  - |
-                    [Service]
-                  - |
-                    Type=simple
-                  - |
-                    ExecStart=/home/ec2-user/MonoToMicro/m2minit.sh
-                  - |
-                    Restart=on-failure
-                  - |
-                    RestartSec=60
-                  - |
-                    KillMode=process
-                  - |+
-
-                  - |
-                    [Install]
-                  - |
-                    WantedBy=multi-user.target
+              content: |
+                [Unit]
+                Description=Restart Mono2Micro
+                Wants=network.target
+                After=syslog.target network-online.target amazon-cloudwatch-agent.target
+                
+                [Service]
+                Type=simple
+                ExecStart=/home/ec2-user/MonoToMicro/m2minit.sh
+                Restart=on-failure
+                RestartSec=60
+                KillMode=process
+                
+                [Install]
+                WantedBy=multi-user.target
               mode: '000644'
               group: root
               user: root
             /home/ec2-user/MonoToMicro/m2minit.sh:
               encoding: plain
-              content: !Join 
-                - ''
-                - - |
-                    #!/bin/bash
-                  - |
-                    source /home/ec2-user/MonoToMicro/m2mcfg.sh
-                  - |
-                    source /home/ec2-user/MonoToMicro/m2mrun.sh
+              content: |
+                #!/bin/bash
+                source /home/ec2-user/MonoToMicro/m2mcfg.sh
+                source /home/ec2-user/MonoToMicro/m2mrun.sh
               mode: '000555'
               group: ec2-user
               user: ec2-user
             /home/ec2-user/MonoToMicro/m2mcfg.sh:
               encoding: plain
-              content: !Join 
-                - ''
-                - - |
-                    #!/bin/bash
-                  - export Database=
-                  - !GetAtt 
-                    - DBInstance
-                    - Endpoint.Address
-                  - |+
+              content: !Sub 
+                - |
+                  #!/bin/bash
+                  export Database=${DB}
+                  export MONO_TO_MICRO_DB_ENDPOINT=${DB}
+                  export AWS_DEFAULT_REGION=${AWS::Region}
+                  export UI_RANDOM_NAME=${UIBucket}
 
-                  - export MONO_TO_MICRO_DB_ENDPOINT=
-                  - !GetAtt 
-                    - DBInstance
-                    - Endpoint.Address
-                  - |+
-
-                  - export AWS_DEFAULT_REGION=
-                  - !Ref AWS::Region
-                  - |+
-
-                  - export UI_RANDOM_NAME=
-                  - !Ref UIBucket
-                  - |+
-
-                  - export ASSETS_RANDOM_NAME=
-                  - !Ref AssetBucket
-                  - |+
-
-                  - |
-                    export PATH=$PATH:/home/ec2-user/gradle-6.9/bin
+                  export ASSETS_RANDOM_NAME=${AssetBucket}
+                  export PATH=$PATH:/home/ec2-user/gradle-6.9/bin
+                - { DB: !GetAtt 'DBInstance.Endpoint.Address' }
               mode: '000555'
               group: ec2-user
               user: ec2-user
             /home/ec2-user/MonoToMicro/m2mrun.sh:
               encoding: plain
-              content: !Join 
-                - ''
-                - - |
-                    #!/bin/bash
-                  - >
-                    java -jar
-                    /home/ec2-user/MonoToMicro/MonoToMicroLegacy/build/libs/MonoToMicroLegacy-0.0.1-SNAPSHOT.jar
-                    &>
-                    /home/ec2-user/MonoToMicro/MonoToMicroLegacy/build/libs/app.log
-                    &
+              content: |
+                #!/bin/bash
+                java -jar /home/ec2-user/MonoToMicro/MonoToMicroLegacy/build/libs/MonoToMicroLegacy-0.0.1-SNAPSHOT.jar &> /home/ec2-user/MonoToMicro/MonoToMicroLegacy/build/libs/app.log &
               mode: '000555'
               group: ec2-user
               user: ec2-user
             /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json:
-              content: !Join 
-                - ''
-                - - |
-                    {
-                  - |2
-                        "logs": {
-                  - |2
-                            "logs_collected": {
-                  - |2
-                                "files": {
-                  - |2
-                                    "collect_list": [
-                  - |2
-                                        {
-                  - |2
-                                            "file_path": "/home/ec2-user/MonoToMicro/MonoToMicroLegacy/build/libs/app.log",
-                  - !Join 
-                    - ''
-                    - - '                        "log_group_name":'
-                      - '"'
-                      - !Ref InstanceLogGroup
-                      - |
-                        ",
-                  - !Join 
-                    - ''
-                    - - '                        "log_stream_name":'
-                      - '"'
-                      - !Ref InstanceLogGroup
-                      - |
-                        -app",
-                  - |2
-                                            "timezone": "Local"
-                  - |2
-                                        }
-                  - |2
-                                    ]
-                  - |2
-                                }
-                  - |2
-                            }
-                  - |2
-                        }
-                  - '}'
+              content: !Sub |
+                  {"logs": {"logs_collected": {"files": {"collect_list": [{"file_path": "/home/ec2-user/MonoToMicro/MonoToMicroLegacy/build/libs/app.log","log_group_name": "${InstanceLogGroup}","log_stream_name":"${InstanceLogGroup}-app", "timezone": "Local"}]}}}}
               mode: '000444'
               group: ec2-user
               user: ec2-user
         start-service:
           commands:
             0-start-service:
-              command: !Join 
-                - ''
-                - - |
-                    sudo systemctl daemon-reload
-                  - |
-                    sudo systemctl enable mono2micro
-                  - |
-                    sudo systemctl start mono2micro
-                  - >
-                    sudo amazon-cloudwatch-agent-ctl -a fetch-config -s -m ec2
-                    -c
-                    file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
+              command: |
+                  sudo systemctl daemon-reload
+                  sudo systemctl enable mono2micro
+                  sudo systemctl start mono2micro
+                  sudo amazon-cloudwatch-agent-ctl -a fetch-config -s -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
     Properties:
       InstanceType: t3.small
       ImageId: !Ref LatestAmiId
@@ -492,29 +363,13 @@ Resources:
       SecurityGroupIds:
         - !Ref EC2SecurityGroup
       IamInstanceProfile: !Ref S3InstanceProfile
-      UserData: !Base64 
-        'Fn::Join':
-          - ''
-          - - |
-              #!/bin/bash
-            - |
-              sudo yum install -y aws-cfn-bootstrap
-            - '/opt/aws/bin/cfn-init -v '
-            - '         --stack '
-            - !Ref AWS::StackName
-            - '         --resource EC2Instance '
-            - '         --region '
-            - !Ref AWS::Region
-            - '         --configsets default'
-            - |+
-
-            - /opt/aws/bin/cfn-signal -e $?
-            - ' --stack '
-            - !Ref AWS::StackName
-            - ' --resource EC2Instance'
-            - ' --region '
-            - !Ref AWS::Region
-            - |+
+      UserData: 
+        Fn::Base64:
+          !Sub |
+            #!/bin/bash
+            sudo yum install -y aws-cfn-bootstrap 
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource EC2Instance --region ${AWS::Region} --configsets default
+            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource EC2Instance --region ${AWS::Region}
 
       Tags:
         - Key: Name
@@ -524,12 +379,9 @@ Resources:
     Type: AWS::SSM::Parameter
     Properties:
       Name: UniShopPublicDnsName
-      Value: !Join 
-        - /
-        - - 'http:/'
-          - !GetAtt 
-            - EC2Instance
-            - PublicDnsName
+      Value: !Sub 
+        - 'http://${Dns}'
+        - { Dns: !GetAtt EC2Instance.PublicDnsName}
       Type: String
       Description: Monolith Public DNS Param
   
