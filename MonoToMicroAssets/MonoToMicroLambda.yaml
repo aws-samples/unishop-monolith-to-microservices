@@ -9,11 +9,18 @@ Resources:
       Runtime: java11
       MemorySize: 1024
       Timeout: 30
+      Layers:
+        - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:35"
       Code:
         S3Bucket: '{{resolve:ssm:LambdaAssetBucketName:1}}'
         S3Key: MonoToMicroLambda-0.0.1.jar
       Role: !Sub 'arn:aws:iam::${AWS::AccountId}:role/service-role/MonoToMicroLambdaRole'
       Handler: com.monoToMicro.Lambda.UnicornBasketImpl::addUnicornToBasket
+      TracingConfig:
+        Mode: Active
+      Tags:
+        - Key: AppName
+          Value: UnicornShop
   RemoveUnicornFromBasketLambda:
     Type: AWS::Lambda::Function
     Properties:
@@ -22,11 +29,18 @@ Resources:
       Runtime: java11
       MemorySize: 1024
       Timeout: 30
+      Layers:
+        - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:35"
       Code:
         S3Bucket: '{{resolve:ssm:LambdaAssetBucketName:1}}'
         S3Key: MonoToMicroLambda-0.0.1.jar
       Role: !Sub 'arn:aws:iam::${AWS::AccountId}:role/service-role/MonoToMicroLambdaRole'
       Handler: com.monoToMicro.Lambda.UnicornBasketImpl::removeUnicornFromBasket
+      TracingConfig:
+        Mode: Active
+      Tags:
+        - Key: AppName
+          Value: UnicornShop
   GetUnicornsBasketLambda:
     Type: AWS::Lambda::Function
     Properties:
@@ -35,8 +49,15 @@ Resources:
       Runtime: java11
       MemorySize: 1024
       Timeout: 30
+      Layers:
+        - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:35"
       Code:
         S3Bucket: '{{resolve:ssm:LambdaAssetBucketName:1}}'
         S3Key: MonoToMicroLambda-0.0.1.jar
       Role: !Sub 'arn:aws:iam::${AWS::AccountId}:role/service-role/MonoToMicroLambdaRole'
       Handler: com.monoToMicro.Lambda.UnicornBasketImpl::getUnicornsBasket
+      TracingConfig:
+        Mode: Active
+      Tags:
+        - Key: AppName
+          Value: UnicornShop
