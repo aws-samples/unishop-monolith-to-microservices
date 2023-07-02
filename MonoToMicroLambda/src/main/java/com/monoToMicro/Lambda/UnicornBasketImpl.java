@@ -20,6 +20,10 @@ package com.monoToMicro.Lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
+import com.amazonaws.xray.AWSXRay;
+import com.amazonaws.xray.entities.Segment;
+import com.amazonaws.xray.entities.Subsegment;
+
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
@@ -66,6 +70,7 @@ public class UnicornBasketImpl implements RequestHandler<UnicornBasket, String> 
     final DynamoDbAsyncTable<UnicornBasket> unicornBasketTable = client.table(
       UNICORN_TABLE_NAME, TableSchema.fromBean(UnicornBasket.class));
 
+    Subsegment subsegment = AWSXRay.beginSubsegment("Add Unicorn");
     //Get current basket
     UnicornBasket currentBasket = unicornBasketTable.getItem(r ->
       r.key(Key.builder().partitionValue(unicornBasket.getUuid()).build())).get();
@@ -99,8 +104,12 @@ public class UnicornBasketImpl implements RequestHandler<UnicornBasket, String> 
       currentUnicorns.add(unicornToAdd);
       currentBasket.setUnicorns(currentUnicorns);
       unicornBasketTable.putItem(currentBasket);
+      Segment segment = AWSXRay.getCurrentSegment();
+      subsegment.putMetadata("unicorns", "added", unicornToAdd);
+      segment.putAnnotation("addedUnicorn", unicornToAdd.getUuid());
       return "Added Unicorn to basket";
     }
+    AWSXRay.endSubsegment();
     return "Are you sure you added a Unicorn?";
   }
 
