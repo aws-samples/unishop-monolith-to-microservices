@@ -499,6 +499,14 @@ Resources:
               Values: 
                 - "UnicornShop"
 
+  ApplicationInsights:
+    Type: "AWS::ApplicationInsights::Application"
+    Properties:
+      ResourceGroupName: !Ref TagBasedGroup
+      CWEMonitorEnabled: true
+      AutoConfigurationEnabled: true
+    DependsOn: TagBasedGroup
+
 Outputs:
   InvokeURL:
     Value: !Sub "https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.amazonaws.com/${ApiStage}"
