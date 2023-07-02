@@ -256,7 +256,8 @@ Resources:
           commands:
             0-clone-repo:
               command: >-
-                git clone -b observability https://github.com/sercasti/unishop-monolith-to-microservices.git
+                git clone
+                https://github.com/aws-samples/unishop-monolith-to-microservices.git
                 /home/ec2-user/MonoToMicro
             1-create-tables:
               command: !Sub 
