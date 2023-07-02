@@ -10,7 +10,7 @@ Resources:
       MemorySize: 1024
       Timeout: 30
       Layers:
-        - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:35"
+        - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:38"
       Code:
         S3Bucket: '{{resolve:ssm:LambdaAssetBucketName:1}}'
         S3Key: MonoToMicroLambda-0.0.1.jar
@@ -30,7 +30,7 @@ Resources:
       MemorySize: 1024
       Timeout: 30
       Layers:
-        - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:35"
+        - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:38"
       Code:
         S3Bucket: '{{resolve:ssm:LambdaAssetBucketName:1}}'
         S3Key: MonoToMicroLambda-0.0.1.jar
@@ -50,7 +50,7 @@ Resources:
       MemorySize: 1024
       Timeout: 30
       Layers:
-        - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:35"
+        - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:38"
       Code:
         S3Bucket: '{{resolve:ssm:LambdaAssetBucketName:1}}'
         S3Key: MonoToMicroLambda-0.0.1.jar
