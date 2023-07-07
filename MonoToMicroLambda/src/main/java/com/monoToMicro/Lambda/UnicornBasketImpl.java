@@ -20,7 +20,12 @@ package com.monoToMicro.Lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
+import com.amazonaws.xray.AWSXRay;
+import com.amazonaws.xray.entities.Subsegment;
+import com.amazonaws.xray.interceptors.TracingInterceptor;
+
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedAsyncClient;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
@@ -40,6 +45,8 @@ public class UnicornBasketImpl implements RequestHandler<UnicornBasket, String> 
     .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
     .httpClientBuilder(AwsCrtAsyncHttpClient.builder().maxConcurrency(50))
     .region(Region.of(System.getenv("AWS_REGION")))
+    .overrideConfiguration(ClientOverrideConfiguration.builder()
+                                    .addExecutionInterceptor(new TracingInterceptor()).build())
     .build();
   private static final DynamoDbEnhancedAsyncClient client = DynamoDbEnhancedAsyncClient.builder()
     .dynamoDbClient(ddb)
@@ -74,6 +81,9 @@ public class UnicornBasketImpl implements RequestHandler<UnicornBasket, String> 
     if (currentBasket == null) {
       if (unicornBasket.getUuid() != null && unicornBasket.getUnicorns() != null) {
         unicornBasketTable.putItem(unicornBasket);
+        Subsegment subsegment = AWSXRay.beginSubsegment("Creating new basket");
+        subsegment.putMetadata("unicorns", "newBasket", unicornBasket.getUuid());
+        AWSXRay.endSubsegment();
         return "Added Unicorn to basket";
       }
       return "No basket exist and none was created";
@@ -99,6 +109,9 @@ public class UnicornBasketImpl implements RequestHandler<UnicornBasket, String> 
       currentUnicorns.add(unicornToAdd);
       currentBasket.setUnicorns(currentUnicorns);
       unicornBasketTable.putItem(currentBasket);
+      Subsegment subsegment = AWSXRay.beginSubsegment("Adding new unicorn");
+      subsegment.putMetadata("unicorns", "newUnicorn ", unicornToAdd.getUuid());
+      AWSXRay.endSubsegment();
       return "Added Unicorn to basket";
     }
     return "Are you sure you added a Unicorn?";
