@@ -26,7 +26,6 @@ import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPResponse;
 import com.amazonaws.xray.AWSXRay;
 import com.amazonaws.xray.entities.Subsegment;
 import com.amazonaws.xray.interceptors.TracingInterceptor;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import static software.amazon.lambda.powertools.utilities.EventDeserializer.extractDataFrom;
 
@@ -41,6 +40,7 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import software.amazon.awssdk.utils.StringUtils;
+import software.amazon.lambda.powertools.utilities.JsonConfig;
 
 import java.util.List;
 import java.util.Map;
@@ -49,7 +49,6 @@ import java.util.concurrent.ExecutionException;
 
 public class UnicornBasketImpl implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2HTTPResponse> {
   private static final String UNICORN_TABLE_NAME = "unishop";
-  private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
   private static final DynamoDbAsyncClient ddb = DynamoDbAsyncClient.builder()
     .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
     .httpClientBuilder(AwsCrtAsyncHttpClient.builder().maxConcurrency(50))
@@ -217,7 +216,7 @@ public class UnicornBasketImpl implements RequestHandler<APIGatewayV2HTTPEvent, 
 
   private static String parseDTOToString(UnicornBasket unicornBasket) {
     try {
-      return OBJECT_MAPPER.writeValueAsString(unicornBasket);
+      return JsonConfig.get().getObjectMapper().writeValueAsString(unicornBasket);
     } catch (JsonProcessingException e) {
       return "";
     }
