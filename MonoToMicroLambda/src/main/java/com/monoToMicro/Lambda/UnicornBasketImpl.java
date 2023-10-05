@@ -201,14 +201,17 @@ public class UnicornBasketImpl implements RequestHandler<APIGatewayV2HTTPEvent, 
     final DynamoDbAsyncTable<UnicornBasket> unicornBasketTable = client.table(
       UNICORN_TABLE_NAME, TableSchema.fromBean(UnicornBasket.class));
     LambdaLogger logger = context.getLogger();
-
+    
     UnicornBasket unicornBasket = null;
-    logger.log("Incoming getUnicornsBasket request Path params" + event.getPathParameters().toString());
-    String uuidPathParamValue = event.getPathParameters().get("uuid");
 
-    if (StringUtils.isNotBlank(uuidPathParamValue)) {
-      unicornBasket = unicornBasketTable
-        .getItem(r -> r.key(Key.builder().partitionValue(uuidPathParamValue).build())).get();
+    if (null != event && null != event.getPathParameters()) {
+      logger.log("Incoming getUnicornsBasket request Path params" + event.getPathParameters().toString());
+      String uuidPathParamValue = event.getPathParameters().get("uuid");
+
+      if (StringUtils.isNotBlank(uuidPathParamValue)) {
+        unicornBasket = unicornBasketTable
+            .getItem(r -> r.key(Key.builder().partitionValue(uuidPathParamValue).build())).get();
+      }
     }
     return APIGatewayV2HTTPResponse.builder().withStatusCode(200).withHeaders(staticHeaders)
       .withBody(parseDTOToString(unicornBasket)).build();
