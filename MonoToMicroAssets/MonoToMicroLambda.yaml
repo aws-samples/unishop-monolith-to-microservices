@@ -13,7 +13,7 @@ Resources:
         - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:38"
       Code:
         S3Bucket: '{{resolve:ssm:LambdaAssetBucketName:1}}'
-        S3Key: MonoToMicroLambda-0.0.1.jar
+        S3Key: MonoToMicroLambda-0.0.2.jar
       Role: !Sub 'arn:aws:iam::${AWS::AccountId}:role/service-role/MonoToMicroLambdaRole'
       Handler: com.monoToMicro.Lambda.UnicornBasketImpl::addUnicornToBasket
       TracingConfig:
@@ -33,7 +33,7 @@ Resources:
         - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:38"
       Code:
         S3Bucket: '{{resolve:ssm:LambdaAssetBucketName:1}}'
-        S3Key: MonoToMicroLambda-0.0.1.jar
+        S3Key: MonoToMicroLambda-0.0.2.jar
       Role: !Sub 'arn:aws:iam::${AWS::AccountId}:role/service-role/MonoToMicroLambdaRole'
       Handler: com.monoToMicro.Lambda.UnicornBasketImpl::removeUnicornFromBasket
       TracingConfig:
@@ -53,7 +53,7 @@ Resources:
         - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:38"
       Code:
         S3Bucket: '{{resolve:ssm:LambdaAssetBucketName:1}}'
-        S3Key: MonoToMicroLambda-0.0.1.jar
+        S3Key: MonoToMicroLambda-0.0.2.jar
       Role: !Sub 'arn:aws:iam::${AWS::AccountId}:role/service-role/MonoToMicroLambdaRole'
       Handler: com.monoToMicro.Lambda.UnicornBasketImpl::getUnicornsBasket
       TracingConfig:
