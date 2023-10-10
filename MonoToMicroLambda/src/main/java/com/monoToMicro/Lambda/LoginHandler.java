@@ -22,34 +22,37 @@ import com.amazonaws.services.lambda.runtime.Context;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
-import com.google.gson.Gson;
+
+import software.amazon.lambda.powertools.utilities.JsonConfig;
+
+import static software.amazon.lambda.powertools.utilities.EventDeserializer.extractDataFrom;
 
 import java.util.Map;
 
 public class LoginHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
   private final UserRepository repository = new UserRepository();
-  private final Gson gson = new Gson();
 
   @Override
   public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent event, Context context)  {
     APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
 
     try{
-      User userRequest = gson.fromJson(event.getBody(),User.class);
+      User userRequest = extractDataFrom(event).as(User.class);
       User profile = repository.getByEmail(userRequest.getEmail());
       response
-        .withHeaders(Map.of("Access-Control-Allow-Origin","*"))
-        .withBody(gson.toJson(profile))
+        .withHeaders(Map.of("Content-Type", "application/json",
+        "Access-Control-Allow-Headers", "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+        "Access-Control-Allow-Origin", "*",
+        "Access-Control-Allow-Methods", "DELETE,OPTIONS,POST,GET"))
+        .withBody(JsonConfig.get().getObjectMapper().writeValueAsString(profile))
         .withStatusCode(200);
     }catch (Exception exception){
       exception.printStackTrace();
-
       response
         .withBody("An error occurred while fetching the user")
         .withStatusCode(400);
     }
-
     return response;
   }
 }
