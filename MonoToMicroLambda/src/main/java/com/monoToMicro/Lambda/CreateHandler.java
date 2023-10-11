@@ -41,8 +41,8 @@ public class CreateHandler implements RequestHandler<APIGatewayProxyRequestEvent
       User userRequest = extractDataFrom(event).as(User.class);
       User profile = repository.getOrCreate(userRequest);
       response
-          .withHeaders(Map.of("Content-Type", "application/json",
-          "Access-Control-Allow-Headers", "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+        .withHeaders(Map.of("Content-Type", "application/json",
+          "Access-Control-Allow-Headers", "Content-Type, x-requested-with",
           "Access-Control-Allow-Origin", "*",
           "Access-Control-Allow-Methods", "DELETE,OPTIONS,POST,GET"))
         .withBody(JsonConfig.get().getObjectMapper().writeValueAsString(profile))
