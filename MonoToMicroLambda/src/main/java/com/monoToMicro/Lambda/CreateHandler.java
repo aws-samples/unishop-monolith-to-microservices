@@ -44,7 +44,7 @@ public class CreateHandler implements RequestHandler<APIGatewayProxyRequestEvent
         .withHeaders(Map.of("Content-Type", "application/json",
           "Access-Control-Allow-Headers", "Content-Type, x-requested-with",
           "Access-Control-Allow-Origin", "*",
-          "Access-Control-Allow-Methods", "DELETE,OPTIONS,POST,GET"))
+          "Access-Control-Allow-Methods", "OPTIONS,POST,GET"))
         .withBody(JsonConfig.get().getObjectMapper().writeValueAsString(profile))
         .withStatusCode(200);
     }catch (Exception exception){
