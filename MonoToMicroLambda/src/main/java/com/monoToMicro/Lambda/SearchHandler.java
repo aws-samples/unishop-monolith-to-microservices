@@ -19,27 +19,46 @@
 package com.monoToMicro.Lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.LambdaLogger;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyRequestEvent;
 import com.amazonaws.services.lambda.runtime.events.APIGatewayProxyResponseEvent;
 
+import software.amazon.awssdk.utils.StringUtils;
 import software.amazon.lambda.powertools.utilities.JsonConfig;
-
-import static software.amazon.lambda.powertools.utilities.EventDeserializer.extractDataFrom;
 
 import java.util.Map;
 
-public class LoginHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
+public class SearchHandler implements RequestHandler<APIGatewayProxyRequestEvent, APIGatewayProxyResponseEvent> {
 
   private final UserRepository repository = new UserRepository();
 
   @Override
-  public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent event, Context context)  {
+  public APIGatewayProxyResponseEvent handleRequest(APIGatewayProxyRequestEvent event, Context context) {
+    LambdaLogger logger = context.getLogger();
     APIGatewayProxyResponseEvent response = new APIGatewayProxyResponseEvent();
 
-    try{
-      User userRequest = extractDataFrom(event).as(User.class);
-      User profile = repository.getByEmail(userRequest.getEmail());
+    // if there's no path param, return not found
+    if (null == event || null == event.getPathParameters()) {
+      response
+        .withBody("no parameter found")
+        .withStatusCode(400);
+      return response;
+    }
+
+    logger.log("Incoming searchUser request Path params" + event.getPathParameters().toString());
+
+    // if there's no email path param, return parameter not found
+    String emailPathParamValue = event.getPathParameters().get("email");
+    if (StringUtils.isBlank(emailPathParamValue)) {
+      response
+        .withBody("no email Parameter found")
+        .withStatusCode(400);
+      return response;
+    }
+
+    User profile = repository.getByEmail(emailPathParamValue);
+    try {
       response
         .withHeaders(Map.of("Content-Type", "application/json",
           "Access-Control-Allow-Headers", "Content-Type, x-requested-with",
@@ -47,10 +66,10 @@ public class LoginHandler implements RequestHandler<APIGatewayProxyRequestEvent,
           "Access-Control-Allow-Methods", "OPTIONS,POST,GET"))
         .withBody(JsonConfig.get().getObjectMapper().writeValueAsString(profile))
         .withStatusCode(200);
-    }catch (Exception exception){
-      exception.printStackTrace();
+    } catch (Exception exception) {
+      logger.log(exception.getMessage());
       response
-        .withBody("An error occurred while fetching the user")
+        .withBody(exception.getMessage())
         .withStatusCode(400);
     }
     return response;
