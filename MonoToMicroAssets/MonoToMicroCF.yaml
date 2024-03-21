@@ -1,10 +1,47 @@
+# IMPORTANT! - Keep template partially in sync with https://github.com/aws-samples/unishop-monolith-to-microservices/blob/master/MonoToMicroAssets/MonoToMicroCF.yaml
 AWSTemplateFormatVersion: 2010-09-09
-Description: Monolith stack for the Application Modernization Workshop/ Immersion Day
+Description: Monolith stack for the Modernization workshop
 Parameters:
   LatestAmiId:
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
     Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
     Description: Use an AMI of your choosing, we recommend to use the latest available
+  MonolithRepository:
+    Type: String
+    Default: https://github.com/aws-samples/unishop-monolith-to-microservices.git
+    Description: The repo to clone for the Monolith Legacy Application
+  MonolithBranch:
+    Type: String
+    Default: reinvent2023
+    Description: The repo branch to use for the Monolith Legacy Application
+
+  ModernizationC9InstanceType:
+    Description: Example Cloud9 instance type
+    Type: String
+    Default: t3.small
+    AllowedValues:
+      - t2.micro
+      - t3.micro
+      - t3.small
+      - t3.medium
+    ConstraintDescription: Must be a valid Cloud9 instance type
+  ModernizationC9InstanceVolumeSize:
+    Type: Number
+    Description: The Size in GB of the Cloud9 Instance Volume.
+    Default: 15
+  MonolithRepository:
+    Type: String
+    Default: https://github.com/aws-samples/unishop-monolith-to-microservices.git # WARNING, currently hard coded below
+    Description: The repo to clone for the Monolith Legacy Application
+  MonolithBranch:
+    Type: String
+    Default: reinvent2023 # WARNING, currently hard coded below
+    Description: The repo branch to use for the Monolith Legacy Application
+  BootstrapFunctionName:
+    Type: String
+    Default: ModernizationC9BootstrapInstance
+    Description: The name of the Lambda function used to bootstrap Cloud9
+  
 Resources:
   MonoToMicroVPC:
     Type: AWS::EC2::VPC
@@ -32,9 +69,9 @@ Resources:
     Properties:
       VpcId: !Ref MonoToMicroVPC
       CidrBlock: 10.0.0.0/24
-      AvailabilityZone: !Select 
+      AvailabilityZone: !Select
         - '0'
-        - !GetAZs 
+        - !GetAZs
           Ref: AWS::Region
       MapPublicIpOnLaunch: true
       Tags:
@@ -45,14 +82,42 @@ Resources:
     Properties:
       VpcId: !Ref MonoToMicroVPC
       CidrBlock: 10.0.1.0/24
-      AvailabilityZone: !Select 
+      AvailabilityZone: !Select
         - '1'
-        - !GetAZs 
+        - !GetAZs
           Ref: AWS::Region
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
           Value: MonoToMicroSubnet2
+  MonoToMicroSubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MonoToMicroVPC
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone: !Select
+        - '0'
+        - !GetAZs
+          Ref: AWS::Region
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: MonoToMicroSubnet3
+
+  MonoToMicroSubnet4:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref MonoToMicroVPC
+      CidrBlock: 10.0.3.0/24
+      AvailabilityZone: !Select
+        - '1'
+        - !GetAZs
+          Ref: AWS::Region
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: MonoToMicroSubnet4
+
   MonoToMicroPublicRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -72,11 +137,80 @@ Resources:
     Properties:
       RouteTableId: !Ref MonoToMicroPublicRouteTable
       SubnetId: !Ref MonoToMicroSubnet1
+
   MonoToMicroPublicSubnetRouteTableAssoc2:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref MonoToMicroPublicRouteTable
       SubnetId: !Ref MonoToMicroSubnet2
+
+  MonoToMicroGatewayEIP1:
+    Type: AWS::EC2::EIP
+    DependsOn: AttachGateway
+    Properties:
+      Domain: vpc
+
+  MonoToMicroGatewayEIP2:
+    Type: AWS::EC2::EIP
+    DependsOn: AttachGateway
+    Properties:
+      Domain: vpc
+
+  MonoToMicroNatGateway1:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt MonoToMicroGatewayEIP1.AllocationId
+      SubnetId: !Ref MonoToMicroSubnet1
+
+  MonoToMicroNatGateway2:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt MonoToMicroGatewayEIP2.AllocationId
+      SubnetId: !Ref MonoToMicroSubnet2
+
+  MonoToMicroPrivateRouteTable1:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref MonoToMicroVPC
+      Tags:
+        - Key: Name
+          Value: MonoToMicroPrivateRoute1
+
+  MonoToMicroPrivateRoute1:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref MonoToMicroPrivateRouteTable1
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref MonoToMicroNatGateway1
+
+  MonoToMicroSubnet3RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref MonoToMicroPrivateRouteTable1
+      SubnetId: !Ref MonoToMicroSubnet3
+
+  MonoToMicroPrivateRouteTable2:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref MonoToMicroVPC
+      Tags:
+        - Key: Name
+          Value: MonoToMicroPrivateRoute2
+
+  MonoToMicroPrivateRoute2:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref MonoToMicroPrivateRouteTable2
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref MonoToMicroNatGateway2
+
+  MonoToMicroSubnet4RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref MonoToMicroPrivateRouteTable2
+      SubnetId: !Ref MonoToMicroSubnet4
+
+
   DBSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -86,10 +220,11 @@ Resources:
         - IpProtocol: tcp
           FromPort: 3306
           ToPort: 3306
-          SourceSecurityGroupId: !Ref EC2SecurityGroup
+          CidrIp: 0.0.0.0/0
       Tags:
         - Key: Name
           Value: MonoToMicroDBSG
+
   DBSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
@@ -155,16 +290,17 @@ Resources:
             Resource:
               - !GetAtt UIBucket.Arn
               - !GetAtt AssetBucket.Arn
-              - !Join 
+              - !Join
                 - ''
                 - - !GetAtt UIBucket.Arn
                   - /*
-              - !Join 
+              - !Join
                 - ''
                 - - !GetAtt AssetBucket.Arn
                   - /*
       Roles:
         - !Ref S3Role
+
   S3Role:
     Type: AWS::IAM::Role
     Properties:
@@ -182,25 +318,7 @@ Resources:
         - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
         - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
       Path: /
-  DBInstance:
-    Type: AWS::RDS::DBInstance
-    DeletionPolicy: Delete
-    Properties:
-      DBName: MonoToMicroDB
-      DBInstanceIdentifier: !Sub ${AWS::StackName}-MonoToMicroDB
-      Engine: MySQL
-      DBInstanceClass: db.t2.micro
-      Port: 3306
-      MasterUsername: MonoToMicroUser
-      MasterUserPassword: MonoToMicroPassword
-      VPCSecurityGroups:
-        - !Ref DBSecurityGroup
-      AllocatedStorage: 5
-      DBSubnetGroupName: !Ref DBSubnetGroup
-      MultiAZ: false
-      Tags:
-        - Key: Name
-          Value: MonoToMicroDB
+
   UIBucket:
     Type: AWS::S3::Bucket
     Properties:
@@ -218,11 +336,77 @@ Resources:
         Statement:
           - Action: ['s3:GetObject']
             Effect: Allow
-            Resource: 
+            Resource:
               !Sub 'arn:aws:s3:::${UIBucket}/*'
             Principal: '*'
   AssetBucket:
     Type: AWS::S3::Bucket
+
+  DBInstance:
+    Type: AWS::EC2::Instance
+    CreationPolicy:
+      ResourceSignal:
+        Count: 1
+        Timeout: PT30M
+    Metadata:
+      AWS::CloudFormation::Init:
+        configSets:
+          default:
+            - update
+            - install
+            - configure
+        update:
+          commands:
+            update:
+              command: sudo yum update -y
+        install:
+          commands:
+            0-install-db:
+              command: |
+                rpm --import https://repo.mysql.com/RPM-GPG-KEY-mysql-2023
+                yum localinstall -y https://dev.mysql.com/get/mysql80-community-release-el7-1.noarch.rpm
+                yum install -y mysql-community-server
+                yum install -y git
+                systemctl enable mysqld
+                systemctl start mysqld
+                mysql -u root "-p$(grep -oP '(?<=root@localhost\: )\S+' /var/log/mysqld.log)" -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'Jasdfklj*%lkj98'" --connect-expired-password
+                mysql -u root "-pJasdfklj*%lkj98" -e "SET GLOBAL validate_password.policy=LOW"
+                mysql -u root "-pJasdfklj*%lkj98" -e "ALTER USER 'root'@'localhost' IDENTIFIED BY 'MonoToMicroPassword'"
+                mysql -u root "-pMonoToMicroPassword" -e "CREATE USER 'MonoToMicroUser'@'%' IDENTIFIED BY 'MonoToMicroPassword'"
+                mysql -u root "-pMonoToMicroPassword" -e "GRANT ALL PRIVILEGES ON *.* TO 'MonoToMicroUser'@'%'"
+                mysql -u root "-pMonoToMicroPassword" -e "FLUSH PRIVILEGES"
+        configure:
+          commands:
+            0-clone-repo:
+              command:
+                !Sub |
+                git clone \
+                --single-branch \
+                --branch ${MonolithBranch} \
+                ${MonolithRepository} \
+                /home/ec2-user/MonoToMicro
+            1-create-tables:
+              command: >-
+                sudo mysql -u MonoToMicroUser -h localhost -P 3306 -pMonoToMicroPassword < /home/ec2-user/MonoToMicro/MonoToMicroLegacy/database/create_tables.sql
+    Properties:
+      InstanceType: t3.small
+      ImageId: !Ref LatestAmiId
+      SubnetId: !Ref MonoToMicroSubnet1
+      SecurityGroupIds:
+        - !Ref DBSecurityGroup
+      IamInstanceProfile: !Ref S3InstanceProfile
+      UserData: 
+        Fn::Base64: 
+          !Sub |
+          #!/bin/bash
+          sudo yum install -y aws-cfn-bootstrap 
+          /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource DBInstance --region ${AWS::Region} --configsets default
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource DBInstance --region ${AWS::Region}
+      Tags:
+        - Key: Name
+          Value: MonoToMicroDB
+          
+
   EC2Instance:
     Type: AWS::EC2::Instance
     CreationPolicy:
@@ -255,19 +439,18 @@ Resources:
         configure:
           commands:
             0-clone-repo:
-              command: >-
-                git clone
-                https://github.com/aws-samples/unishop-monolith-to-microservices.git
+              command:
+                !Sub |
+                git clone \
+                --single-branch \
+                --branch ${MonolithBranch} \
+                ${MonolithRepository} \
                 /home/ec2-user/MonoToMicro
-            1-create-tables:
-              command: !Sub 
-                - sudo mysql -u MonoToMicroUser -h ${DB} -P 3306 -pMonoToMicroPassword < /home/ec2-user/MonoToMicro/MonoToMicroLegacy/database/create_tables.sql
-                - { DB: !GetAtt 'DBInstance.Endpoint.Address' }       
-            2-exportDbEndpoint:
-              command: !Sub 
+            1-exportDbEndpoint:
+              command: !Sub
                 - export MONO_TO_MICRO_DB_ENDPOINT=${DB}
-                - { DB: !GetAtt 'DBInstance.Endpoint.Address' }
-            3-gradle-install-build:
+                - { DB: !GetAtt 'DBInstance.PrivateDnsName' }
+            2-gradle-install-build:
               command: |
                 cd /home/ec2-user/
                 sudo wget https://services.gradle.org/distributions/gradle-6.9-bin.zip
@@ -277,16 +460,33 @@ Resources:
                 gradle clean build
                 cd /home/ec2-user/MonoToMicro/MonoToMicroLambda
                 ./gradlew clean shadowJar
-            4-modify-configuration:
-              command: >-
-                sed -i "s/:\/\/.*\"/:\/\/$(curl -s
-                http://169.254.169.254/latest/meta-data/public-hostname)\"/g"
-                /home/ec2-user/MonoToMicro/MonoToMicroUI/config.json
-            5-populate-buckets:
-              command: !Sub | 
+            3-install-nginx:
+              command: !Join
+                - ''
+                - - |
+                    amazon-linux-extras enable epel
+                  - >
+                    yum install -y epel-release
+                  - >
+                    yum install -y nginx
+                  - >
+                    systemctl enable nginx
+                  - >
+                    chown -R nginx:nginx /home/ec2-user/MonoToMicro/MonoToMicroUI
+                  - >
+                    chmod -R 755 /home
+                  - >
+                    sed -i'' -e 's|/usr/share/nginx/html|/home/ec2-user/MonoToMicro/MonoToMicroUI|g' /etc/nginx/nginx.conf
+                  - >
+                    echo 'location /api/ { proxy_pass http://127.0.0.1:8080/; }' > /etc/nginx/default.d/001-api.conf
+                  - >
+                    systemctl start nginx
+            4-populate-buckets:
+              command: !Sub |
                 AWS_DEFAULT_REGION=${AWS::Region}
                 aws s3 cp /home/ec2-user/MonoToMicro/MonoToMicroUI s3://${UIBucket}/ --recursive
                 aws s3 cp /home/ec2-user/MonoToMicro/MonoToMicroLambda/build/libs s3://${AssetBucket}/ --recursive
+                aws s3 cp /home/ec2-user/MonoToMicro/MonoToMicroLegacy/build/libs s3://${AssetBucket}/ --recursive
         create-service-files:
           files:
             /etc/systemd/system/mono2micro.service:
@@ -320,7 +520,7 @@ Resources:
               user: ec2-user
             /home/ec2-user/MonoToMicro/m2mcfg.sh:
               encoding: plain
-              content: !Sub 
+              content: !Sub
                 - |
                   #!/bin/bash
                   export Database=${DB}
@@ -330,7 +530,7 @@ Resources:
 
                   export ASSETS_RANDOM_NAME=${AssetBucket}
                   export PATH=$PATH:/home/ec2-user/gradle-6.9/bin
-                - { DB: !GetAtt 'DBInstance.Endpoint.Address' }
+                - { DB: !GetAtt 'DBInstance.PrivateDnsName' }
               mode: '000555'
               group: ec2-user
               user: ec2-user
@@ -344,7 +544,7 @@ Resources:
               user: ec2-user
             /opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json:
               content: !Sub |
-                  {"logs": {"logs_collected": {"files": {"collect_list": [{"file_path": "/home/ec2-user/MonoToMicro/MonoToMicroLegacy/build/libs/app.log","log_group_name": "${InstanceLogGroup}","log_stream_name":"${InstanceLogGroup}-app", "timezone": "Local"}]}}}}
+                {"logs": {"logs_collected": {"files": {"collect_list": [{"file_path": "/home/ec2-user/MonoToMicro/MonoToMicroLegacy/build/libs/app.log","log_group_name": "${InstanceLogGroup}","log_stream_name":"${InstanceLogGroup}-app", "timezone": "Local"}]}}}}
               mode: '000444'
               group: ec2-user
               user: ec2-user
@@ -352,10 +552,10 @@ Resources:
           commands:
             0-start-service:
               command: |
-                  sudo systemctl daemon-reload
-                  sudo systemctl enable mono2micro
-                  sudo systemctl start mono2micro
-                  sudo amazon-cloudwatch-agent-ctl -a fetch-config -s -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
+                sudo systemctl daemon-reload
+                sudo systemctl enable mono2micro
+                sudo systemctl start mono2micro
+                sudo amazon-cloudwatch-agent-ctl -a fetch-config -s -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/etc/amazon-cloudwatch-agent.json
     Properties:
       InstanceType: t3.small
       ImageId: !Ref LatestAmiId
@@ -363,13 +563,13 @@ Resources:
       SecurityGroupIds:
         - !Ref EC2SecurityGroup
       IamInstanceProfile: !Ref S3InstanceProfile
-      UserData: 
+      UserData:
         Fn::Base64:
           !Sub |
-            #!/bin/bash
-            sudo yum install -y aws-cfn-bootstrap 
-            /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource EC2Instance --region ${AWS::Region} --configsets default
-            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource EC2Instance --region ${AWS::Region}
+          #!/bin/bash
+          sudo yum install -y aws-cfn-bootstrap 
+          /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource EC2Instance --region ${AWS::Region} --configsets default
+          /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource EC2Instance --region ${AWS::Region}
 
       Tags:
         - Key: Name
@@ -379,7 +579,7 @@ Resources:
     Type: AWS::SSM::Parameter
     Properties:
       Name: UniShopPublicDnsName
-      Value: !Sub 
+      Value: !Sub
         - 'http://${Dns}'
         - { Dns: !GetAtt EC2Instance.PublicDnsName}
       Type: String
@@ -400,24 +600,489 @@ Resources:
       Type: String
       Value: !Ref AssetBucket
 
+  ApplicationAssetBucketSSMParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: ApplicationAssetBucketName
+      Type: String
+      Value: !Ref AssetBucket
+
+  # Pre-create RefactorSpaces environment to save time
+  UniShopRefactorSpacesModernizationEnvironment:
+    Type: AWS::RefactorSpaces::Environment
+    Properties:
+      Name: unistore-dev
+      NetworkFabricType: NONE
+      Description: A Refactor Spaces environment for the Unicorn store
+
+  UniShopRefactorSpacesApplication:
+    Type: AWS::RefactorSpaces::Application
+    Properties:
+      Name: unistore
+      EnvironmentIdentifier: !Ref UniShopRefactorSpacesModernizationEnvironment
+      VpcId: !Ref MonoToMicroVPC
+      ProxyType: API_GATEWAY
+      ApiGatewayProxy:
+        EndpointType: REGIONAL
+    DependsOn:
+      - MonoToMicroSubnet1
+      - MonoToMicroSubnet2
+
+
+  RDSCluster:
+    Type: AWS::RDS::DBCluster
+    Properties:
+      DBClusterIdentifier: !Sub ${AWS::StackName}-MonoToMicroDBCluster
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      Engine: aurora-mysql
+      EngineMode: provisioned
+      EngineVersion: 5.7.mysql_aurora.2.11.2
+      MasterUsername: MonoToMicroUser
+      MasterUserPassword: MonoToMicroPassword
+      Port: 3306
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-cluster"
+      VpcSecurityGroupIds: [!Ref DBSecurityGroup]
+  
+  RDSInstance:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
+    Properties:
+      DBClusterIdentifier:
+        Ref: RDSCluster
+      DBInstanceIdentifier: !Sub ${AWS::StackName}-MonoToMicroDB
+      Engine: aurora-mysql
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      DBInstanceClass: db.r6i.2xlarge
+      MultiAZ: false
+      Tags:
+        - Key: Name
+          Value: MonoToMicroDB
+          
+  MySQLSourceEndpoint:
+    Type: 'AWS::DMS::Endpoint'
+    Properties:
+      EndpointIdentifier: mysqlsource
+      EndpointType: source
+      EngineName: mysql
+      Port: 3306
+      ServerName: !GetAtt DBInstance.PrivateDnsName
+      Username: MonoToMicroUser
+      Password: MonoToMicroPassword
+      Tags:
+        - Key: Name
+          Value: MonoToMicroSourceDMSEndpoint
+
+  MySQLTargetEndpoint:
+    Type: 'AWS::DMS::Endpoint'
+    Properties:
+      EndpointIdentifier: mysqltarget
+      EndpointType: target
+      EngineName: aurora
+      Port: 3306
+      ServerName: !GetAtt  RDSInstance.Endpoint.Address
+      Username: MonoToMicroUser
+      Password: MonoToMicroPassword
+      Tags:
+        - Key: Name
+          Value: MonoToMicroTargetDMSEndpoint
+
+  MonoToMicroDmsVpcRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: dms-vpc-role
+      AssumeRolePolicyDocument:
+        Version : 2012-10-17
+        Statement :
+          -
+            Effect : Allow
+            Principal :
+              Service :
+                - dms.amazonaws.com
+            Action :
+              - sts:AssumeRole
+      Path : /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonDMSVPCManagementRole
+
+  MonoToMicroReplicationInstanceSubnetGroup: 
+    Type: "AWS::DMS::ReplicationSubnetGroup"
+    DependsOn: MonoToMicroDmsVpcRole
+    Properties: 
+      ReplicationSubnetGroupDescription: Basic Replication Instance Subnet Group
+      SubnetIds: 
+        - !Ref MonoToMicroSubnet1
+        - !Ref MonoToMicroSubnet2
+
+  MonoToMicroReplicationInstance: 
+    Type: "AWS::DMS::ReplicationInstance"
+    DependsOn: MonoToMicroDmsVpcRole
+    Properties: 
+      ReplicationInstanceClass: dms.t3.medium
+      PubliclyAccessible: false
+      VpcSecurityGroupIds:
+              - !Ref DBSecurityGroup
+      ReplicationSubnetGroupIdentifier: !Ref MonoToMicroReplicationInstanceSubnetGroup
+
+
+  DynamoDBTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: unishop-users
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: uuid
+          AttributeType: S
+      KeySchema:
+        - AttributeName: uuid
+          KeyType: HASH
+      Tags:
+        - Key: Name
+          Value: MonoToMicroDDBTable
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: MonoToMicroLambdaRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: /service-role/
+      Policies:
+        - PolicyName: LambdaDynamoDBAccess
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - dynamodb:DescribeTable
+                  - dynamodb:GetItem
+                  - dynamodb:DeleteItem
+                  - dynamodb:PutItem
+                  - dynamodb:UpdateItem
+                  - dynamodb:Query
+                  - dynamodb:Scan
+                Resource: !GetAtt DynamoDBTable.Arn
+
+  ModernizationC9Role:
+    Type: AWS::IAM::Role
+    Properties:
+      Tags:
+        - Key: Environment
+          Value: AWS Example
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+                - ssm.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+      Path: "/"
+
+  ModernizationC9LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: "/"
+      Policies:
+        - PolicyName:
+            Fn::Join:
+              - ''
+              - - ModernizationC9LambdaPolicy-
+                - Ref: AWS::Region
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+              - Effect: Allow
+                Action:
+                  - cloudformation:DescribeStacks
+                  - cloudformation:DescribeStackEvents
+                  - cloudformation:DescribeStackResource
+                  - cloudformation:DescribeStackResources
+                  - ec2:DescribeInstances
+                  - ec2:AssociateIamInstanceProfile
+                  - ec2:ModifyInstanceAttribute
+                  - ec2:ReplaceIamInstanceProfileAssociation
+                  - iam:ListInstanceProfiles
+                  - iam:PassRole
+                Resource: "*"
+
+  ################## LAMBDA BOOTSTRAP FUNCTION ################
+
+  ModernizationC9BootstrapInstanceLambda:
+    Type: Custom::ModernizationC9BootstrapInstanceLambda
+    DependsOn:
+      - ModernizationC9BootstrapInstanceLambdaFunction
+      - ModernizationC9Instance
+      - ModernizationC9InstanceProfile
+      - ModernizationC9LambdaExecutionRole
+    Properties:
+      Tags:
+        - Key: Environment
+          Value: AWS Example
+      ServiceToken:
+        Fn::GetAtt:
+          - ModernizationC9BootstrapInstanceLambdaFunction
+          - Arn
+      REGION:
+        Ref: AWS::Region
+      StackName:
+        Ref: AWS::StackName
+      EnvironmentId:
+        Ref: ModernizationC9Instance
+      LabIdeInstanceProfileName:
+        Ref: ModernizationC9InstanceProfile
+      LabIdeInstanceProfileArn:
+        Fn::GetAtt:
+          - ModernizationC9InstanceProfile
+          - Arn
+
+  ModernizationC9BootstrapInstanceLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: !Ref BootstrapFunctionName
+      Tags:
+        - Key: Environment
+          Value: AWS Example
+      Handler: index.lambda_handler
+      Role:
+        Fn::GetAtt:
+          - ModernizationC9LambdaExecutionRole
+          - Arn
+      Runtime: python3.9
+      MemorySize: 256
+      Timeout: '600'
+      Code:
+        ZipFile: |
+          from __future__ import print_function
+          import boto3
+          import json
+          import os
+          import time
+          import traceback
+          import cfnresponse
+          
+          def lambda_handler(event, context):
+              # logger.info('event: {}'.format(event))
+              # logger.info('context: {}'.format(context))
+              responseData = {}
+          
+              status = cfnresponse.SUCCESS
+          
+              if event['RequestType'] == 'Create':
+                  try:
+                      # Open AWS clients
+                      ec2 = boto3.client('ec2')
+          
+                      # Get the InstanceId of the Cloud9 IDE
+                      instance = ec2.describe_instances(Filters=[{'Name': 'tag:Name','Values': ['aws-cloud9-'+event['ResourceProperties']['StackName']+'-'+event['ResourceProperties']['EnvironmentId']]}])['Reservations'][0]['Instances'][0]
+                      # logger.info('instance: {}'.format(instance))
+          
+                      # Create the IamInstanceProfile request object
+                      iam_instance_profile = {
+                          'Arn': event['ResourceProperties']['LabIdeInstanceProfileArn'],
+                          'Name': event['ResourceProperties']['LabIdeInstanceProfileName']
+                      }
+                      # logger.info('iam_instance_profile: {}'.format(iam_instance_profile))
+          
+                      # Wait for Instance to become ready before adding Role
+                      instance_state = instance['State']['Name']
+                      # logger.info('instance_state: {}'.format(instance_state))
+                      while instance_state != 'running':
+                          time.sleep(5)
+                          instance_state = ec2.describe_instances(InstanceIds=[instance['InstanceId']])
+                          # logger.info('instance_state: {}'.format(instance_state))
+          
+                      # activate termination protection to avoid participants shut down the environment
+                      ec2.modify_instance_attribute(InstanceId=instance['InstanceId'],Attribute="disableApiTermination",Value='True')
+          
+                      # attach instance profile
+                      response = ec2.associate_iam_instance_profile(IamInstanceProfile=iam_instance_profile, InstanceId=instance['InstanceId'])
+                      # logger.info('response - associate_iam_instance_profile: {}'.format(response))
+                      r_ec2 = boto3.resource('ec2')
+          
+                      responseData = {'Success': 'Started bootstrapping for instance: '+instance['InstanceId']}
+                      cfnresponse.send(event, context, status, responseData, 'CustomResourcePhysicalID')
+          
+                  except Exception as e:
+                      status = cfnresponse.FAILED
+                      print(traceback.format_exc())
+                      responseData = {'Error': traceback.format_exc(e)}
+                  finally:
+                      cfnresponse.send(event, context, status, responseData, 'CustomResourcePhysicalID')
+  ################## SSM BOOTSRAP HANDLER ###############
+  ModernizationC9OutputBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+
+  ModernizationC9SSMDocument:
+    Type: AWS::SSM::Document
+    Properties:
+      Tags:
+        - Key: Environment
+          Value: AWS Example
+      DocumentType: Command
+      Content:
+        schemaVersion: '2.2'
+        description: Bootstrap Cloud9 Instance
+        mainSteps:
+          - action: aws:runShellScript
+            name: ModernizationC9bootstrap
+            inputs:
+              runCommand:
+                - "#!/bin/bash"
+                - date
+                - echo LANG=en_US.utf-8 >> /etc/environment
+                - echo LC_ALL=en_US.UTF-8 >> /etc/environment
+                - . /home/ec2-user/.bashrc
+                - yum -y remove aws-cli; yum -y install sqlite telnet jq strace tree gcc glibc-static python3 python3-pip gettext bash-completion
+                - echo '=== CONFIGURE default python version ==='
+                - PATH=$PATH:/usr/bin
+                - alternatives --set python /usr/bin/python3
+                - echo '=== Clone Git repository ==='
+                # FIX replacement, hardcoding for now                - sudo -H -u ec2-user bash -c "git clone --single-branch --branch ${MonolithBranch} ${MonolithRepository} /home/ec2-user/environment/unishop/"
+                - sudo -H -u ec2-user bash -c "git clone --single-branch --branch reinvent2023 https://github.com/aws-samples/unishop-monolith-to-microservices.git /home/ec2-user/environment/unishop/"
+                - echo '=== INSTALL and CONFIGURE default software components ==='
+                - sudo -H -u ec2-user bash -c "pip install --user -U boto boto3 botocore awscli"
+                - echo '=== Resizing the Instance volume'
+                - !Sub SIZE=${ModernizationC9InstanceVolumeSize}
+                - !Sub REGION=${AWS::Region}
+                - |
+                  INSTANCEID=$(curl http://169.254.169.254/latest/meta-data/instance-id)
+                  VOLUMEID=$(aws ec2 describe-instances \
+                    --instance-id $INSTANCEID \
+                    --query "Reservations[0].Instances[0].BlockDeviceMappings[0].Ebs.VolumeId" \
+                    --output text --region $REGION)
+                  aws ec2 modify-volume --volume-id $VOLUMEID --size $SIZE --region $REGION
+                  while [ \
+                    "$(aws ec2 describe-volumes-modifications \
+                      --volume-id $VOLUMEID \
+                      --filters Name=modification-state,Values="optimizing","completed" \
+                      --query "length(VolumesModifications)"\
+                      --output text --region $REGION)" != "1" ]; do
+                  sleep 1
+                  done
+                  if [ $(readlink -f /dev/xvda) = "/dev/xvda" ]
+                  then
+                    sudo growpart /dev/xvda 1
+                    STR=$(cat /etc/os-release)
+                    SUB="VERSION_ID=\"2\""
+                    if [[ "$STR" == *"$SUB"* ]]
+                    then
+                      sudo xfs_growfs -d /
+                    else
+                      sudo resize2fs /dev/xvda1
+                    fi
+                  else
+                    sudo growpart /dev/nvme0n1 1
+                    STR=$(cat /etc/os-release)
+                    SUB="VERSION_ID=\"2\""
+                    if [[ "$STR" == *"$SUB"* ]]
+                    then
+                      sudo xfs_growfs -d /
+                    else
+                      sudo resize2fs /dev/nvme0n1p1
+                    fi
+                  fi
+                - !Sub BOOTSTRAP_FUNCTION_NAME=${BootstrapFunctionName}
+                # remove bootstrap function to not confuse participants (to be improved as it's part of the CF stack)
+                - aws lambda delete-function --function-name $BOOTSTRAP_FUNCTION_NAME --region $REGION
+                - mkdir /home/ec2-user/.aws
+                - echo '[default]' > /home/ec2-user/.aws/config
+                - echo 'output = json' >> /home/ec2-user/.aws/config
+                - chmod 600 /home/ec2-user/.aws/config && chmod 600 /home/ec2-user/.aws/credentials
+                - echo 'PATH=$PATH:/usr/local/bin' >> /home/ec2-user/.bashrc
+                - echo 'export PATH' >> /home/ec2-user/.bashrc
+                - echo '=== CLEANING /home/ec2-user ==='
+                - for f in cloud9; do rm -rf /home/ec2-user/$f; done
+                - chown -R ec2-user:ec2-user /home/ec2-user/
+                - echo '=== PREPARE REBOOT in 1 minute with at ==='
+                - FILE=$(mktemp) && echo $FILE && echo '#!/bin/bash' > $FILE && echo 'reboot -f --verbose' >> $FILE && at now + 1 minute -f $FILE
+                - echo "Bootstrap completed with return code $?"
+
+  ModernizationC9BootstrapAssociation:
+    Type: AWS::SSM::Association
+    DependsOn: ModernizationC9OutputBucket
+    Properties:
+      Name: !Ref ModernizationC9SSMDocument
+      OutputLocation:
+        S3Location:
+          OutputS3BucketName: !Ref ModernizationC9OutputBucket
+          OutputS3KeyPrefix: bootstrapoutput
+      Targets:
+        - Key: tag:SSMBootstrap
+          Values:
+            - Active
+
+  ################## INSTANCE #####################
+  ModernizationC9InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles:
+        - Ref: ModernizationC9Role
+
+  ModernizationC9Instance:
+    DependsOn: ModernizationC9BootstrapAssociation
+    Type: AWS::Cloud9::EnvironmentEC2
+    Properties:
+      Description: AWS Cloud9 instance for the Modernization workshop
+      AutomaticStopTimeMinutes: 3600
+      ImageId: amazonlinux-2023-x86_64
+      InstanceType:
+        Ref: ModernizationC9InstanceType
+      Name:
+        Ref: AWS::StackName
+      Tags:
+        - Key: SSMBootstrap
+          Value: Active
+        - Key: Environment
+          Value: AWS Example
+
+
 Outputs:
-  PublicDns:
-    Value: !GetAtt 
+  WebsiteURL:
+    Value: !GetAtt
       - PublicDnsNameSSMParam
       - Value
-    Description: Server Public DNS
+    Description: Unicorn Shop WebSite URL
   VpcId:
-    Value: !GetAtt 
+    Value: !GetAtt
       - VpcIdSSMParam
       - Value
+    Description: VPC where the monolith is running
   AssetBucket:
     Value: !Ref AssetBucket
-    Description: S3 Bucket containing the compiled Lambda function
+    Description: S3 Bucket containing the compiled Java code
   UIBucket:
     Value: !Ref UIBucket
     Description: S3 Bucket containing the UniShop website
-  WebsiteURL:
-    Value: !GetAtt 
-      - UIBucket
-      - WebsiteURL
-    Description: URL for UniShop website hosted on S3
+  RoleForLambda:
+    Value: !GetAtt LambdaRole.Arn
