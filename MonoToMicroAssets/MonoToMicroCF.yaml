@@ -422,12 +422,8 @@ Resources:
                 - { DB: !GetAtt 'DBInstance.PrivateDnsName' }
             2-gradle-install-build:
               command: |
-                cd /home/ec2-user/
-                sudo wget https://services.gradle.org/distributions/gradle-6.9-bin.zip
-                sudo unzip -d /home/ec2-user/ /home/ec2-user/gradle-6.9-bin.zip
-                export PATH=$PATH:/home/ec2-user/gradle-6.9/bin
                 cd /home/ec2-user/MonoToMicro/MonoToMicroLegacy
-                gradle clean build
+                ./gradlew clean build
                 cd /home/ec2-user/MonoToMicro/MonoToMicroLambda
                 ./gradlew clean shadowJar
             3-install-nginx:
@@ -499,7 +495,6 @@ Resources:
                   export UI_RANDOM_NAME=${UIBucket}
 
                   export ASSETS_RANDOM_NAME=${AssetBucket}
-                  export PATH=$PATH:/home/ec2-user/gradle-6.9/bin
                 - { DB: !GetAtt 'DBInstance.PrivateDnsName' }
               mode: '000555'
               group: ec2-user
@@ -544,7 +539,7 @@ Resources:
       Tags:
         - Key: Name
           Value: MonoToMicroEC2
-  
+
   PublicDnsNameSSMParam:
     Type: AWS::SSM::Parameter
     Properties:
@@ -554,7 +549,7 @@ Resources:
         - { Dns: !GetAtt EC2Instance.PublicDnsName}
       Type: String
       Description: Monolith Public DNS Param
-  
+
   VpcIdSSMParam:
     Type: AWS::SSM::Parameter
     Properties:
