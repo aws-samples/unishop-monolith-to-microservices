@@ -19,6 +19,7 @@ dependencies {
   implementation 'com.fasterxml.jackson.core:jackson-databind:2.15.3'
 
   implementation platform('software.amazon.awssdk:bom:2.17.136')
+  implementation platform('com.amazonaws:aws-xray-recorder-sdk-bom:2.14.0')
   implementation 'software.amazon.awssdk:aws-crt-client:2.17.143-PREVIEW'
   implementation 'software.amazon.lambda:powertools-serialization:1.17.0'
   
@@ -28,6 +29,9 @@ dependencies {
   }
   implementation 'org.slf4j:slf4j-api:1.7.36'
   implementation 'org.slf4j:slf4j-simple:1.7.36'
+  implementation 'com.amazonaws:aws-xray-recorder-sdk-core'
+  implementation 'com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2'
+  implementation 'com.amazonaws:aws-xray-recorder-sdk-aws-sdk-v2-instrumentor'
 }
 
 shadowJar {

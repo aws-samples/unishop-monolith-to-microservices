@@ -15,12 +15,16 @@ Resources:
       Tags:
         - Key: Name
           Value: MonoToMicroDDBTable
+        - Key: AppName
+          Value: UnicornShop
   LambdaRole:
     Type: AWS::IAM::Role
     Properties:
       RoleName: MonoToMicroLambdaRole
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+        - arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess
+        - arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:

@@ -13,6 +13,9 @@ Resources:
       EndpointConfiguration:
         Types:
           - EDGE
+      Tags:
+        - Key: AppName
+          Value: UnicornShop
 
   UnicornsResource:
     Type: AWS::ApiGateway::Resource
@@ -400,6 +403,12 @@ Resources:
       - CreateUserMethod
       - UserLoginMethod
 
+  ApiLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub "/aws/apigateway/${ApiGatewayRestApi}-logs"
+      RetentionInDays: 30
+
   ApiStage:
     Type: AWS::ApiGateway::Stage
     Properties:
@@ -407,6 +416,96 @@ Resources:
       RestApiId: !Ref ApiGatewayRestApi
       StageName: dev
       Description: development
+      TracingEnabled: true
+      Tags:
+        - Key: AppName
+          Value: UnicornShop
+      AccessLogSetting:
+        DestinationArn: !GetAtt ApiLogGroup.Arn
+        Format: >
+          {
+          "apigw":{
+          "apiid":"$context.apiId",
+          "stage":"$context.stage",
+          "routekey":"$context.routeKey",
+          },
+          "client":{
+          "ip":"$context.identity.sourceIp"
+          },
+          "request":{
+          "requestId":"$context.requestId",
+          "time":"$context.requestTime",
+          "time_epoch":"$context.requestTimeEpoch",
+          "http_method":"$context.httpMethod",
+          "path":"$context.path",
+          "protocol":"$context.protocol",
+          "awsendpointrequestid":"$context.awsEndpointRequestId",
+          "extendedrequestid":"$context.extendedRequestId"
+          },
+          "integration":{
+          "latency":"$context.integrationLatency",
+          "status":"$context.integrationStatus",
+          "error":"$context.integration.error",
+          "status":"$context.integration.status",
+          "latency":"$context.integration.latency",
+          "requestId":"$context.integration.requestId"
+          },
+          "response":{
+          "latency":"$context.responseLatency",
+          "status":"$context.status",
+          "length":"$context.responseLength"
+          }
+      MethodSettings:
+        - ResourcePath: "/*"
+          HttpMethod: "*"
+          #CloudWatch metrics are enabled 
+          MetricsEnabled: true
+          #Log full requests/responses data
+          DataTraceEnabled: false
+
+  ApiCloudWatchRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - apigateway.amazonaws.com
+            Action: "sts:AssumeRole"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
+
+  ApiAccount:
+    Type: "AWS::ApiGateway::Account"
+    Properties:
+      CloudWatchRoleArn: !GetAtt ApiCloudWatchRole.Arn
+
+  #by adding this resource, Cloudwatch automatically generates an observability dashboard for monitoring stack resources.
+  TagBasedGroup:
+    Type: "AWS::ResourceGroups::Group"
+    Properties:
+      Name: "UnicornShopResourcesGroup"
+      ResourceQuery:
+        Type:
+          "TAG_FILTERS_1_0" 
+        Query:
+          ResourceTypeFilters: 
+            - "AWS::AllSupported" 
+          TagFilters:
+            - 
+              Key: "AppName" 
+              Values: 
+                - "UnicornShop"
+
+  ApplicationInsights:
+    Type: "AWS::ApplicationInsights::Application"
+    Properties:
+      ResourceGroupName: !Ref TagBasedGroup
+      CWEMonitorEnabled: true
+      AutoConfigurationEnabled: true
+    DependsOn: TagBasedGroup
 
 Outputs:
   InvokeURL:

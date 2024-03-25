@@ -614,7 +614,7 @@ Resources:
         - Key: Name
           Value: !Sub "${AWS::StackName}-cluster"
       VpcSecurityGroupIds: [!Ref DBSecurityGroup]
-  
+
   RDSInstance:
     Type: AWS::RDS::DBInstance
     DeletionPolicy: Delete
