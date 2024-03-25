@@ -19,10 +19,15 @@
 package com.monoToMicro.Lambda;
 
 import com.amazonaws.services.lambda.runtime.Context;
+import com.amazonaws.services.lambda.runtime.LambdaLogger;
 import com.amazonaws.services.lambda.runtime.RequestHandler;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPEvent;
+import com.amazonaws.services.lambda.runtime.events.APIGatewayV2HTTPResponse;
 import com.amazonaws.xray.AWSXRay;
 import com.amazonaws.xray.entities.Subsegment;
 import com.amazonaws.xray.interceptors.TracingInterceptor;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import static software.amazon.lambda.powertools.utilities.EventDeserializer.extractDataFrom;
 
 import software.amazon.awssdk.auth.credentials.EnvironmentVariableCredentialsProvider;
 import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration;
@@ -35,22 +40,29 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 import software.amazon.awssdk.utils.StringUtils;
+import software.amazon.lambda.powertools.utilities.JsonConfig;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
-public class UnicornBasketImpl implements RequestHandler<UnicornBasket, String> {
+
+public class UnicornBasketImpl implements RequestHandler<APIGatewayV2HTTPEvent, APIGatewayV2HTTPResponse> {
   private static final String UNICORN_TABLE_NAME = "unishop";
   private static final DynamoDbAsyncClient ddb = DynamoDbAsyncClient.builder()
     .credentialsProvider(EnvironmentVariableCredentialsProvider.create())
     .httpClientBuilder(AwsCrtAsyncHttpClient.builder().maxConcurrency(50))
     .region(Region.of(System.getenv("AWS_REGION")))
     .overrideConfiguration(ClientOverrideConfiguration.builder()
-                                    .addExecutionInterceptor(new TracingInterceptor()).build())
+          .addExecutionInterceptor(new TracingInterceptor()).build())
     .build();
   private static final DynamoDbEnhancedAsyncClient client = DynamoDbEnhancedAsyncClient.builder()
     .dynamoDbClient(ddb)
     .build();
+  private static Map<String, String> staticHeaders = Map.of("Content-Type", "application/json",
+    "Access-Control-Allow-Headers", "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+    "Access-Control-Allow-Origin", "*",
+    "Access-Control-Allow-Methods", "DELETE,OPTIONS,POST,GET");
 
   static {
     try {
@@ -64,14 +76,19 @@ public class UnicornBasketImpl implements RequestHandler<UnicornBasket, String> 
   }
 
   @Override
-  public String handleRequest(UnicornBasket unicornBasket, Context context) {
-    return "Unicorn Lives Matter";
+  public APIGatewayV2HTTPResponse handleRequest(APIGatewayV2HTTPEvent event, Context context) {
+    return APIGatewayV2HTTPResponse.builder().withStatusCode(200)
+      .withHeaders(staticHeaders).withBody("Unicorn Lives Matter").build();
   }
 
-  public String addUnicornToBasket(UnicornBasket unicornBasket, Context context)
-    throws ExecutionException, InterruptedException {
+  public APIGatewayV2HTTPResponse addUnicornToBasket(APIGatewayV2HTTPEvent event, Context context)
+      throws ExecutionException, InterruptedException {
     final DynamoDbAsyncTable<UnicornBasket> unicornBasketTable = client.table(
       UNICORN_TABLE_NAME, TableSchema.fromBean(UnicornBasket.class));
+
+    UnicornBasket unicornBasket = extractDataFrom(event).as(UnicornBasket.class);
+    LambdaLogger logger = context.getLogger();
+    logger.log("Incoming addUnicornToBasket request " + parseDTOToString(unicornBasket));
 
     //Get current basket
     UnicornBasket currentBasket = unicornBasketTable.getItem(r ->
@@ -84,9 +101,11 @@ public class UnicornBasketImpl implements RequestHandler<UnicornBasket, String> 
         Subsegment subsegment = AWSXRay.beginSubsegment("Creating new basket");
         subsegment.putMetadata("unicorns", "newBasket", unicornBasket.getUuid());
         AWSXRay.endSubsegment();
-        return "Added Unicorn to basket";
+        return APIGatewayV2HTTPResponse.builder().withStatusCode(200)
+          .withHeaders(staticHeaders).withBody("Added Unicorn to basket").build();
       }
-      return "No basket exist and none was created";
+      return APIGatewayV2HTTPResponse.builder().withStatusCode(200)
+        .withHeaders(staticHeaders).withBody("No basket exist and none was created").build();
     }
 
     //basket already exist, will check if item exist and add if not found
@@ -101,7 +120,8 @@ public class UnicornBasketImpl implements RequestHandler<UnicornBasket, String> 
       for (Unicorn currentUnicorn : currentUnicorns) {
         if (currentUnicorn.getUuid().equals(unicornToAddUuid)) {
           //The unicorn already exists, no need to add him.
-          return "Unicorn already exists!";
+          return APIGatewayV2HTTPResponse.builder().withStatusCode(200)
+            .withHeaders(staticHeaders).withBody("Unicorn already exists!").build();
         }
       }
 
@@ -112,15 +132,21 @@ public class UnicornBasketImpl implements RequestHandler<UnicornBasket, String> 
       Subsegment subsegment = AWSXRay.beginSubsegment("Adding new unicorn");
       subsegment.putMetadata("unicorns", "newUnicorn ", unicornToAdd.getUuid());
       AWSXRay.endSubsegment();
-      return "Added Unicorn to basket";
+      return APIGatewayV2HTTPResponse.builder().withStatusCode(200)
+        .withHeaders(staticHeaders).withBody("Added Unicorn to basket").build();
     }
-    return "Are you sure you added a Unicorn?";
+    return APIGatewayV2HTTPResponse.builder().withStatusCode(200)
+        .withHeaders(staticHeaders).withBody("Are you sure you added a Unicorn?").build();
   }
 
-  public String removeUnicornFromBasket(UnicornBasket unicornBasket, Context context)
+  public APIGatewayV2HTTPResponse removeUnicornFromBasket(APIGatewayV2HTTPEvent event, Context context)
     throws ExecutionException, InterruptedException {
     final DynamoDbAsyncTable<UnicornBasket> unicornBasketTable = client.table(
       UNICORN_TABLE_NAME, TableSchema.fromBean(UnicornBasket.class));
+
+    UnicornBasket unicornBasket = extractDataFrom(event).as(UnicornBasket.class);
+    LambdaLogger logger = context.getLogger();
+    logger.log("Incoming removeUnicornFromBasket request " + parseDTOToString(unicornBasket));
 
     //Get current basket
     UnicornBasket currentBasket = unicornBasketTable.getItem(r ->
@@ -128,7 +154,8 @@ public class UnicornBasketImpl implements RequestHandler<UnicornBasket, String> 
 
     //if no basket exist then return an error
     if (currentBasket == null) {
-      return "No basket exist, nothing to delete";
+      return APIGatewayV2HTTPResponse.builder().withStatusCode(200)
+        .withHeaders(staticHeaders).withBody("No basket exist, nothing to delete").build();
     }
 
     //basket exist, will check if item exist and will remove
@@ -146,12 +173,14 @@ public class UnicornBasketImpl implements RequestHandler<UnicornBasket, String> 
           if (currentUnicorns.isEmpty()) {
             //no more unicorns in basket, will delete the basket
             unicornBasketTable.deleteItem(currentBasket);
-            return "Unicorn was removed and basket was deleted!";
+            return APIGatewayV2HTTPResponse.builder().withStatusCode(200)
+              .withHeaders(staticHeaders).withBody("Unicorn was removed and basket was deleted!").build();
           } else {
             //keeping basket alive as more unicorns are in it
             currentBasket.setUnicorns(currentUnicorns);
             unicornBasketTable.putItem(currentBasket);
-            return "Unicorn was removed! Other unicorns are still in basket";
+            return APIGatewayV2HTTPResponse.builder().withStatusCode(200)
+              .withHeaders(staticHeaders).withBody("Unicorn was removed! Other unicorns are still in basket").build();
           }
         }
       }
@@ -160,21 +189,39 @@ public class UnicornBasketImpl implements RequestHandler<UnicornBasket, String> 
         //no unicorn to remove, will try to remove the basket nonetheless
         unicornBasketTable.deleteItem(currentBasket);
       }
-      return "Didn't find a unicorn to remove";
+      return APIGatewayV2HTTPResponse.builder().withStatusCode(200)
+        .withHeaders(staticHeaders).withBody("Didn't find a unicorn to remove").build();
     }
-    return "Are you sure you asked to remove a Unicorn?";
+    return APIGatewayV2HTTPResponse.builder().withStatusCode(200)
+      .withHeaders(staticHeaders).withBody("Are you sure you asked to remove a Unicorn?").build();
   }
 
-  public UnicornBasket getUnicornsBasket(UnicornBasket unicornBasket, Context context)
+  public APIGatewayV2HTTPResponse getUnicornsBasket(APIGatewayV2HTTPEvent event, Context context)
     throws ExecutionException, InterruptedException {
     final DynamoDbAsyncTable<UnicornBasket> unicornBasketTable = client.table(
       UNICORN_TABLE_NAME, TableSchema.fromBean(UnicornBasket.class));
+    LambdaLogger logger = context.getLogger();
+    
+    UnicornBasket unicornBasket = null;
 
-    if (!StringUtils.isEmpty(unicornBasket.getUuid())) {
-      return unicornBasketTable.getItem(r ->
-        r.key(Key.builder().partitionValue(unicornBasket.getUuid()).build())).get();
+    if (null != event && null != event.getPathParameters()) {
+      logger.log("Incoming getUnicornsBasket request Path params" + event.getPathParameters().toString());
+      String uuidPathParamValue = event.getPathParameters().get("uuid");
+
+      if (StringUtils.isNotBlank(uuidPathParamValue)) {
+        unicornBasket = unicornBasketTable
+            .getItem(r -> r.key(Key.builder().partitionValue(uuidPathParamValue).build())).get();
+      }
     }
+    return APIGatewayV2HTTPResponse.builder().withStatusCode(200).withHeaders(staticHeaders)
+      .withBody(parseDTOToString(unicornBasket)).build();
+  }
 
-    return null;
+  private static String parseDTOToString(UnicornBasket unicornBasket) {
+    try {
+      return JsonConfig.get().getObjectMapper().writeValueAsString(unicornBasket);
+    } catch (JsonProcessingException e) {
+      return "";
+    }
   }
 }
